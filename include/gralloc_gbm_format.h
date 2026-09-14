@@ -30,7 +30,7 @@ typedef struct gralloc_gbm_color_format {
 typedef gralloc_gbm_color_format_t color_fmt_t;
 
 /**
- * Android color format is using Little-endian, but GBM color format is using Big-endian.
+ * Android HAL color format is using Little-endian, but GBM color format is using Big-endian.
  * We store the map between them in this struct.
  * YCbCr = YUV
  */
@@ -43,6 +43,7 @@ static const color_fmt_t color_format_map[] = {
 	{ HAL_PIXEL_FORMAT_YCBCR_422_SP, "HAL_PIXEL_FORMAT_YCBCR_422_SP", GBM_FORMAT_YUV422, "GBM_FORMAT_YUV422" },
 	{ HAL_PIXEL_FORMAT_YCRCB_420_SP, "HAL_PIXEL_FORMAT_YCRCB_420_SP", GBM_FORMAT_YVU420, "GBM_FORMAT_YVU420" },
 	{ HAL_PIXEL_FORMAT_YCBCR_422_I, "HAL_PIXEL_FORMAT_YCBCR_422_I", GBM_FORMAT_VYUY, "GBM_FORMAT_VYUY" },
+#define GBM_FORMAT_EXT_YUV420_FLEXIBLE __gbm_fourcc_code('9', '4', '2', '0')
 	{ HAL_PIXEL_FORMAT_YCBCR_420_888, "HAL_PIXEL_FORMAT_YCBCR_420_888", GBM_FORMAT_YUV420, "GBM_FORMAT_YUV420" },
 	{ HAL_PIXEL_FORMAT_RGBA_1010102, "HAL_PIXEL_FORMAT_RGBA_1010102", GBM_FORMAT_ABGR2101010, "GBM_FORMAT_ABGR2101010" },
 	{ HAL_PIXEL_FORMAT_Y8, "HAL_PIXEL_FORMAT_Y8", GBM_FORMAT_R8, "GBM_FORMAT_R8" },
@@ -51,9 +52,9 @@ static const color_fmt_t color_format_map[] = {
 	{ HAL_PIXEL_FORMAT_YV12, "HAL_PIXEL_FORMAT_YV12", GBM_FORMAT_GR88, "GBM_FORMAT_GR88" },
 	{ HAL_PIXEL_FORMAT_RGBA_FP16, "HAL_PIXEL_FORMAT_RGBA_FP16", GBM_FORMAT_ABGR16161616F, "GBM_FORMAT_ABGR16161616F" },
 	{ HAL_PIXEL_FORMAT_YCBCR_P010, "HAL_PIXEL_FORMAT_YCBCR_P010", __gbm_fourcc_code('P', '0', '1', '0'), "GBM_FOURCC_CODE_P010" },
-#define HAL_PIXEL_FORMAT_UNKNOWN 0
-#define GBM_FORMAT_UNKNOWN __gbm_fourcc_code('0', '0', '0', '0')
-	{ HAL_PIXEL_FORMAT_UNKNOWN, "HAL_PIXEL_FORMAT_UNKNOWN", GBM_FORMAT_UNKNOWN, "GBM_FORMAT_UNKNOWN" },
+#define HAL_PIXEL_FORMAT_EXT_UNKNOWN 0
+#define GBM_FORMAT_EXT_UNKNOWN __gbm_fourcc_code('0', '0', '0', '0')
+	{ HAL_PIXEL_FORMAT_EXT_UNKNOWN, "HAL_PIXEL_FORMAT_EXT_UNKNOWN", GBM_FORMAT_EXT_UNKNOWN, "GBM_FORMAT_EXT_UNKNOWN" },
 };
 #define COLOR_FMT_MAP_SIZE (sizeof(color_format_map) / sizeof(color_fmt_t))
 
@@ -105,19 +106,32 @@ typedef struct gralloc_gbm_gbm_color_bpp {
 } gralloc_gbm_gbm_color_bpp_t;
 typedef gralloc_gbm_gbm_color_bpp_t color_bpp_t;
 
+/**
+ * Bits per pixel for color formats
+ * All formats in color_format_map[] should be supported.
+ * The formats not be added in color_format_map[] also be allowed.
+ */
 static const color_bpp_t color_bpp_map[] = {
-	{ GBM_FORMAT_ABGR8888, 32 },
-	{ GBM_FORMAT_XBGR8888, 32 },
-	{ GBM_FORMAT_ARGB8888, 32 },
-	{ GBM_FORMAT_BGR888, 24 },
-	{ GBM_FORMAT_BGR565, 16 },
-	{ GBM_FORMAT_YUV422, 16 },
-	{ GBM_FORMAT_YVU420, 12 },
-	{ GBM_FORMAT_VYUY, 16 },
-	{ GBM_FORMAT_YUV420, 12 },
-	{ GBM_FORMAT_ABGR2101010, 32 },
-	{ GBM_FORMAT_ABGR16161616F, 64 },
-	{ GBM_FORMAT_UNKNOWN, 0 },
+	{ /* GBM_FORMAT_ABGR8888 */ color_format_map[0].gbm_format, 32 },
+	{ /* GBM_FORMAT_XBGR8888 */ color_format_map[1].gbm_format, 32 },
+	{ /* GBM_FORMAT_ARGB8888 */ color_format_map[2].gbm_format, 32 },
+	{ /* GBM_FORMAT_BGR888 */ color_format_map[3].gbm_format, 24 },
+	{ /* GBM_FORMAT_BGR565 */ color_format_map[4].gbm_format, 16 },
+	{ /* GBM_FORMAT_YUV422 */ color_format_map[5].gbm_format, 16 },
+	{ /* GBM_FORMAT_YVU420 */ color_format_map[6].gbm_format, 12 },
+	{ /* GBM_FORMAT_VYUY */ color_format_map[7].gbm_format, 32 },
+	{ /* GBM_FORMAT_YUV420 */ color_format_map[8].gbm_format, 12 },
+	{ /* GBM_FORMAT_ABGR2101010 */ color_format_map[9].gbm_format, 32 },
+	{ /* GBM_FORMAT_R8 */ color_format_map[10].gbm_format, 8 },
+	{ /* GBM_FORMAT_R16 */ color_format_map[11].gbm_format, 16 },
+	{ /* GBM_FORMAT_GR88 */ color_format_map[12].gbm_format, 16 },
+	{ /* GBM_FORMAT_ABGR16161616F */ color_format_map[13].gbm_format, 64 },
+	{ /* additional */ GBM_FORMAT_RGB565, 16 },
+	{ /* additional */ GBM_FORMAT_NV12, 8 },
+	{ /* additional */ GBM_FORMAT_NV21, 16 },
+	{ /* additional */ GBM_FORMAT_RGBX8888, 32 },
+	{ /* additional */ GBM_FORMAT_XRGB8888, 32 },
+	{ /* external */ GBM_FORMAT_EXT_UNKNOWN, 0 },
 };
 #define COLOR_BPP_MAP_SIZE (sizeof(color_bpp_map) / sizeof(color_bpp_t))
 
