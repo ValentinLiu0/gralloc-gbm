@@ -10,12 +10,13 @@
 #include <linux/errno.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <gralloc_gbm_format.h>
 #include <gralloc_gbm.h>
 
 #define LOG_TAG "gralloc_gbm"
-#include <cutils/log.h>
+#include <private/log.h>
 
 /**
  * Hash table to store managed (allocated/imported) android buffer.
@@ -26,7 +27,7 @@ static android_buffer_t *android_buffer_table = NULL;
 
 android_buffer_t *find_buffer_k(const int fd)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 
 	android_buffer_t *entry;
 	HASH_FIND_INT(android_buffer_table, &fd, entry);
@@ -38,14 +39,14 @@ android_buffer_t *find_buffer_k(const int fd)
 
 android_buffer_t *find_buffer_v(const void *v)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!v) {
-		ALOGE("Invalid v: %p, return nullptr", v);
+		LOG_E("Invalid v: %p, return nullptr", v);
 		return nullptr;
 	}
 
 	android_buffer_t *entry, *tmp;
-	ALOGV("buffer table count: %d", HASH_COUNT(android_buffer_table));
+	LOG_V("buffer table count: %d", HASH_COUNT(android_buffer_table));
 	HASH_ITER(hh, android_buffer_table, entry, tmp) {
 		if (entry->bo == v)
 			return entry;
@@ -56,16 +57,16 @@ android_buffer_t *find_buffer_v(const void *v)
 
 int add_buffer(android_buffer_t *buffer)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer)
 		return -EINVAL;
 	
 	if (find_buffer_k(buffer->fd)) {
-		ALOGD("trying to add an existed buffer, skip.");
+		LOG_D("trying to add an existed buffer, skip.");
 	}
 
 	if (!buffer->bo)
-		ALOGW("Trying to add a buffer with invalid value.");
+		LOG_W("Trying to add a buffer with invalid value.");
 
 	HASH_ADD_INT(android_buffer_table, fd, buffer);
 	
@@ -78,7 +79,7 @@ int add_buffer(android_buffer_t *buffer)
 
 int delete_buffer(android_buffer_t *buffer)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer)
 		return -EINVAL;
 
@@ -90,7 +91,7 @@ int delete_buffer(android_buffer_t *buffer)
 
 int delete_buffer_fd(const int fd)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (fd < 0)
 		return -EINVAL;
 
@@ -100,7 +101,7 @@ int delete_buffer_fd(const int fd)
 		HASH_DEL(android_buffer_table, tmp);
 		free(tmp);
 	} else {
-		ALOGD("no fd=%d buffer found, skip deleting.", fd);
+		LOG_D("no fd=%d buffer found, skip deleting.", fd);
 	}
 
 	return 0;
@@ -120,7 +121,7 @@ bool is_gralloc_gbm_ready(void)
 
 int gralloc_gbm_init(void)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (g_driver && g_driver->ready)
 		return 0;
 
@@ -145,16 +146,16 @@ int gralloc_gbm_init(void)
 	g_driver->gbm_backend_name = gbm_device_get_backend_name(g_driver->gbm_dev);
 	g_driver->ready = true;
 
-	ALOGV("initialized Gralloc GBM driver! (Backend: %s)", g_driver->gbm_backend_name);
+	LOG_V("initialized Gralloc GBM driver! (Backend: %s)", g_driver->gbm_backend_name);
 
 	return 0;
 }
 
 int gralloc_gbm_deinit(void)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!g_driver->ready)
-		ALOGW("Not allowed to uninitialized driver, nothing to do.");
+		LOG_W("Not allowed to uninitialized driver, nothing to do.");
 
 	gbm_device_destroy(g_driver->gbm_dev);
 
@@ -165,7 +166,7 @@ int gralloc_gbm_deinit(void)
 
 // Callback for gbm_bo_set_user_data()
 void gralloc_gbm_bo_data_destroy(struct gbm_bo *bo, void *data) {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	gbm_bo_data_t *bo_data = (gbm_bo_data_t *) data;
 	free(bo_data);
 
@@ -174,7 +175,7 @@ void gralloc_gbm_bo_data_destroy(struct gbm_bo *bo, void *data) {
 
 const gralloc_gbm_driver_t *gralloc_gbm_get(void)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!is_gralloc_gbm_ready())
 		return nullptr;
 
@@ -183,13 +184,13 @@ const gralloc_gbm_driver_t *gralloc_gbm_get(void)
 
 inline gbm_bo_data_t *gralloc_gbm_bo_user_data_init(struct gbm_bo *bo)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!bo)
 		return nullptr;
  
 	gbm_bo_data_t *bo_data = (gbm_bo_data_t *) gbm_bo_get_user_data(bo);
 	if (!bo_data) {
-		ALOGV("%s: no user data found in BO (%p), set a new one.", __func__, bo);
+		LOG_V("%s: no user data found in BO (%p), set a new one.", __func__, bo);
 		bo_data = calloc(1, sizeof(gbm_bo_data_t));
 		gbm_bo_set_user_data(bo, bo_data, gralloc_gbm_bo_data_destroy);
 	}
@@ -201,7 +202,7 @@ inline gbm_bo_data_t *gralloc_gbm_bo_user_data_init(struct gbm_bo *bo)
 
 static int gralloc_gbm_bo_map(struct gbm_bo *bo, int enable_write, void **addr)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!bo)
 		return -EINVAL;
 
@@ -222,17 +223,17 @@ static int gralloc_gbm_bo_map(struct gbm_bo *bo, int enable_write, void **addr)
 
 	assert(stride == gbm_bo_get_stride(bo));
 
-	ALOGV("mapped BO (%p) at %p", bo, *addr);
+	LOG_V("mapped BO (%p) at %p", bo, *addr);
 	return 0;
 }
 
 static void gralloc_gbm_bo_unmap(struct gbm_bo *bo) {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	gbm_bo_data_t *bo_data = (gbm_bo_data_t *) gbm_bo_get_user_data(bo);
 
 	gbm_bo_unmap(bo, bo_data->map_data);
 	bo_data->map_data = NULL;
-	ALOGV("unmapped BO (%p).", bo);
+	LOG_V("unmapped BO (%p).", bo);
 }
 
 /* Gralloc GBM Android platform functions */
@@ -243,7 +244,7 @@ static void gralloc_gbm_bo_unmap(struct gbm_bo *bo) {
  */
 int32_t gralloc_gbm_caculate_android_pixel_stride(const int32_t android_format, const uint32_t gbm_stride /*pitch*/)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	uint32_t gbm_format = color_fmt_a2g(android_format);
 	if (gbm_format <= 0)
 		return -EINVAL;
@@ -253,7 +254,7 @@ int32_t gralloc_gbm_caculate_android_pixel_stride(const int32_t android_format, 
 
 uint_t gralloc_gbm_caculate_gbm_flags(const int usage, const int gbm_format)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	uint_t flags = GBM_BO_USE_NONE;
 
 	if (usage & GRALLOC_USAGE_SW_READ_OFTEN)
@@ -283,20 +284,21 @@ uint_t gralloc_gbm_caculate_gbm_flags(const int usage, const int gbm_format)
 	//if (usage & GRALLOC_USAGE_RENDERSCRIPT)
 	//	flags |= GBM_BO_USE_FRONT_RENDERING;
 
-	if ((flags & GBM_BO_USE_SCANOUT) &&
-		!(gbm_format == GBM_FORMAT_XRGB8888 || gbm_format == GBM_FORMAT_XBGR8888)) {
-		ALOGW("We added GBM_BO_USE_SCANOUT but using unsupported format (%s).\n" \
-		      "This may cause an issue if the flags has GBM_BO_USE_WRITE.", color_fmt_getname(gbm_format, true));
-	}
+	//if ((flags & GBM_BO_USE_SCANOUT) &&
+	//	!(gbm_format == GBM_FORMAT_XRGB8888 || gbm_format == GBM_FORMAT_XBGR8888)) {
+	//	LOG_W("We added GBM_BO_USE_SCANOUT but using unsupported format (%s).\n" \
+	//	      "This may cause an issue if the flags has GBM_BO_USE_WRITE.", color_fmt_getname(gbm_format, true));
+	//}
 
-	ALOGV_IF((flags == GBM_BO_USE_NONE), "No flag matched.");
+	if (flags == GBM_BO_USE_NONE)
+		LOG_D("No flag matched. (input: %d)", usage);
 
 	return flags;
 }
 
 bool gralloc_gbm_is_allocator_desc_supported(const allocator_desc_t *desc)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!is_gralloc_gbm_ready())
 		return false;
 
@@ -323,16 +325,20 @@ bool gralloc_gbm_is_allocator_desc_supported(const allocator_desc_t *desc)
 
 int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *out_stride, native_handle_t **out_buffer_handle)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!is_gralloc_gbm_ready())
 		return -ENODEV;
 
-	if (!gralloc_gbm_is_allocator_desc_supported(desc))
+	if (!gralloc_gbm_is_allocator_desc_supported(desc)) {
+		LOG_E("Unsupported allocator desc: %s", allocator_desc_to_string(desc));
 		return -EINVAL;
+	}
 
 	uint32_t gbm_format = color_fmt_a2g(desc->format);
-	if (gbm_format <= 0)
+	if (gbm_format <= 0) {
+		LOG_E("Unsupported Android color format: %d", desc->format);
 		return -EINVAL;
+	}
 
 	uint_t flags = gralloc_gbm_caculate_gbm_flags(desc->usage, gbm_format);
 
@@ -341,6 +347,7 @@ int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *
 	if (flags & GBM_BO_USE_CURSOR) {
 		width = ALIGN(MAX(desc->width, 64), 16);
 		height = ALIGN(MAX(desc->height, 64), 16);
+		LOG_V("Aligned size for cursor from %dx%d to %dx%d.", desc->width, desc->height, width, height);
 	}
 	/*
 	 * For YV12, we request GR88, so halve the width since we're getting
@@ -349,18 +356,29 @@ int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *
 	if (desc->format == HAL_PIXEL_FORMAT_YV12) {
 		width = ALIGN(desc->width, 32) / 2;
 		height += ALIGN(desc->height, 2) / 2;
-		ALOGD("width and height changed to %dx%d for HAL_PIXEL_FORMAT_YV12.", width, height);
+		LOG_D("width and height changed to %dx%d for HAL_PIXEL_FORMAT_YV12.", width, height);
 	}
 
 	native_handle_t *handle = gralloc_handle_create(width, height, desc->format, desc->usage);
-	if (!handle)
+	if (!handle) {
+		LOG_E("Failed to create gralloc handle (%ux%u), hal fmt=%s, usage=0x%lx.",
+		      width, height, color_fmt_getname(desc->format, false),
+		      desc->usage);
 		return -EINVAL;
+	}
 
 	struct gbm_bo *bo = gbm_bo_create(g_driver->gbm_dev, width, height, gbm_format, flags);
-	if (!bo)
+	if (!bo) {
+		LOG_E("Failed to create BO (%ux%u), fmt=%s, flags=0x%x, usage=0x%lx.",
+		      width, height, color_fmt_getname(gbm_format, true),
+		      flags, desc->usage);
 		return -EINVAL;
+	}
 
-	gralloc_gbm_bo_user_data_init(bo);
+	if(!gralloc_gbm_bo_user_data_init(bo)) {
+		LOG_E("Failed to initialize user data of buffer object.");
+		return -EINVAL;
+	}
 
 	struct gralloc_handle_t *ghandle = gralloc_handle(handle);
 	if (!ghandle) {
@@ -371,9 +389,9 @@ int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *
 	ghandle->modifier = gbm_bo_get_modifier(bo);
 
 	android_buffer_t *buffer = calloc(1, sizeof(android_buffer_t));
-	if (!buffer) {
+	if (!buffer)
 		return -ENOMEM;
-	}
+
 	buffer->fd = ghandle->prime_fd;
 	buffer->bo = bo;
 	add_buffer(buffer);
@@ -382,7 +400,7 @@ int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *
 	if (out_stride)
 		*out_stride = ghandle->stride;
 
-	ALOGD("new buffer object (%p, fd=%u): %ux%u, fmt=%s, flags=%u, stride=%u, modifier=%lu",
+	LOG_D("new buffer object (%p, fd=%u): %ux%u, fmt=%s, flags=0x%x, stride=%u, modifier=%lu",
 	      bo, gbm_bo_get_fd(bo), width, height, color_fmt_getname(gbm_format, true),
 	      flags, ghandle->stride, ghandle->modifier);
 	return 0;
@@ -390,7 +408,7 @@ int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *
 
 int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!is_gralloc_gbm_ready())
 		return -ENODEV;
 
@@ -402,7 +420,7 @@ int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 
 	fd_data->format = color_fmt_a2g(ghandle->format);
 	if (fd_data->format <= 0) {
-		ALOGE("Trying to import buffer with unsupported Android color format (%d), abort.",
+		LOG_E("Trying to import buffer with unsupported Android color format (%d), abort.",
 		      ghandle->format);
 		free(fd_data);
 		return -EINVAL;
@@ -420,6 +438,7 @@ int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 	if (ghandle->usage & GRALLOC_USAGE_CURSOR) {
 		fd_data->width = ALIGN(MAX(ghandle->width, 64), 16);
 		fd_data->height = ALIGN(MAX(ghandle->height, 64), 16);
+		LOG_V("Aligned size for cursor from %dx%d to %dx%d.", ghandle->width, ghandle->height, fd_data->width, fd_data->height);
 	}
 
 	fd_data->modifier = ghandle->modifier;
@@ -430,7 +449,7 @@ int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 	uint32_t flags = gralloc_gbm_caculate_gbm_flags(ghandle->usage, fd_data->format);
 	bo = gbm_bo_import(g_driver->gbm_dev, GBM_BO_IMPORT_FD_MODIFIER, fd_data, flags);
 	if (!bo) {
-		ALOGE("Failed to import buffer object (%ux%u), fmt=%s, flags=%u.",
+		LOG_E("Failed to import buffer object (%ux%u), fmt=%s, flags=0x%x.",
 		      fd_data->width, fd_data->height, color_fmt_getname(fd_data->format, true),
 		      flags);
 		free(fd_data);
@@ -445,7 +464,7 @@ int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 	add_buffer(buffer);
 
 	free(fd_data);
-	ALOGD("imported buffer object (%p, fd=%u): %ux%u, fmt=%s, flags=%u, stride=%u",
+	LOG_D("imported buffer object (%p, fd=%u): %ux%u, fmt=%s, flags=0x%x, stride=%u",
 	      bo, fd_data->fds[0], fd_data->width, fd_data->height,
 	      color_fmt_getname(fd_data->format, true), flags, fd_data->strides[0]);
 	return 0;
@@ -453,7 +472,7 @@ int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 
 int gralloc_gbm_android_buffer_free(const buffer_handle_t handle)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	struct gralloc_handle_t *ghandle = gralloc_handle(handle);
 	assert(ghandle);
 
@@ -465,7 +484,7 @@ int gralloc_gbm_android_buffer_free(const buffer_handle_t handle)
 		struct gbm_bo *bo = (struct gbm_bo *) buffer->bo;
 		gbm_bo_destroy(bo);
 		delete_buffer(buffer);
-		ALOGV("freed buffer %p", buffer);
+		LOG_V("freed buffer %p", buffer);
 	}
 
 	return 0;
@@ -475,13 +494,13 @@ int gralloc_gbm_android_buffer_lock(const buffer_handle_t handle, int usage,
 				    const int top, const int bottom, const int left, const int right,
 				    void **out)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!is_gralloc_gbm_ready())
 		return -ENODEV;
 
 	/* Framebuffer must NOT be locked */
 	if (usage & GRALLOC_USAGE_HW_FB) {
-		ALOGW("The framebuffer shouldn't be locked!");
+		LOG_W("The framebuffer shouldn't be locked!");
 		return -EINVAL;
 	}
 
@@ -494,14 +513,14 @@ int gralloc_gbm_android_buffer_lock(const buffer_handle_t handle, int usage,
 		if (!(ghandle->usage & (GRALLOC_USAGE_SW_READ_OFTEN | GRALLOC_USAGE_SW_WRITE_OFTEN)) &&
 		    !(ghandle->usage & GRALLOC_USAGE_HW_FB) &&
 		    !(ghandle->usage & GRALLOC_USAGE_HW_TEXTURE)) {
-			ALOGE("Unsupported buffer usage: %d (%d)!", ghandle->usage, usage);
+			LOG_E("Unsupported buffer usage: %d (%d)!", ghandle->usage, usage);
 			return -EINVAL;
 		}
 	}
 
 	android_buffer_t *buffer = find_buffer_k(ghandle->prime_fd);
 	if (!buffer) {
-		ALOGV("not a managed buffer (%p, fd=%u)!", handle, ghandle->prime_fd);
+		LOG_V("not a managed buffer (%p, fd=%u)!", handle, ghandle->prime_fd);
 		return -EINVAL;
 	}
 
@@ -533,13 +552,13 @@ int gralloc_gbm_android_buffer_lock(const buffer_handle_t handle, int usage,
 
 int gralloc_gbm_android_buffer_unlock(const buffer_handle_t handle)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	struct gralloc_handle_t *ghandle = gralloc_handle(handle);
 	assert(ghandle);
 
 	android_buffer_t *buffer = find_buffer_k(ghandle->prime_fd);
 	if (!buffer) {
-		ALOGV("not a managed buffer (%p, fd=%u)!", handle, ghandle->prime_fd);
+		LOG_V("not a managed buffer (%p, fd=%u)!", handle, ghandle->prime_fd);
 		return -EINVAL;
 	}
 
@@ -553,7 +572,7 @@ int gralloc_gbm_android_buffer_unlock(const buffer_handle_t handle)
     	int mapped = bo_data->locked_for & (GRALLOC_USAGE_SW_WRITE_MASK | GRALLOC_USAGE_SW_READ_MASK);
 
 	if (!bo_data->lock_count) {
-		ALOGW("Trying unlock an already unlocked BO, noting to do.");
+		LOG_W("Trying unlock an already unlocked BO, noting to do.");
 		return 0;
 	}
 
@@ -569,13 +588,13 @@ int gralloc_gbm_android_buffer_unlock(const buffer_handle_t handle)
 
 int gralloc_gbm_android_buffer_query(const buffer_handle_t handle, android_buffer_info_t *out)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	struct gralloc_handle_t *ghandle = gralloc_handle(handle);
 	assert(ghandle);
 
 	android_buffer_t *buffer = find_buffer_k(ghandle->prime_fd);
 	if (!buffer) {
-		ALOGV("not a managed buffer (%p, fd=%u)!", handle, ghandle->prime_fd);
+		LOG_V("not a managed buffer (%p, fd=%u)!", handle, ghandle->prime_fd);
 		return -EINVAL;
 	}
 	
@@ -612,13 +631,13 @@ int gralloc_gbm_android_buffer_query(const buffer_handle_t handle, android_buffe
 
 gbm_bo_data_t *gralloc_gbm_android_buffer_get_extdata(const buffer_handle_t handle)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	struct gralloc_handle_t *ghandle = gralloc_handle(handle);
 	assert(ghandle);
 
 	android_buffer_t *buffer = find_buffer_k(ghandle->prime_fd);
 	if (!buffer) {
-		ALOGV("not a managed buffer (%p, fd=%u)!", handle, gralloc_handle(handle)->prime_fd);
+		LOG_V("not a managed buffer (%p, fd=%u)!", handle, gralloc_handle(handle)->prime_fd);
 		return nullptr;
 	}
 	

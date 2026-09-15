@@ -7,8 +7,6 @@
 #ifndef GRALLOC_GBM_H
 #define GRALLOC_GBM_H
 
-//#define LOG_NDEBUG 0
-
 #include <gbm.h>
 #include <gralloc_gbm_bo_ext.h>
 #include <hardware/gralloc.h>
@@ -81,6 +79,28 @@ typedef struct gralloc_gbm_allocator_buffer_descriptor {
  * a new GBM BO. The Allocator will generate it and pass it to gralloc_gbm.
  */
 typedef gralloc_gbm_allocator_buffer_descriptor_t allocator_desc_t;
+
+static inline const char *allocator_desc_to_string(const allocator_desc_t *desc)
+{
+	static char buf[256];
+
+	if (desc == NULL) {
+		return "(null)";
+	}
+
+	snprintf(buf, sizeof(buf),
+		 "name=%s, width=%d, height=%d, layer_count=%d, "
+		 "format=%d, usage=0x%llx, reserved_size=%lld",
+		 desc->name ? (const char *)desc->name : "(null)",
+		 desc->width,
+		 desc->height,
+		 desc->layer_count,
+		 desc->format,
+		 (unsigned long long)desc->usage,
+		 (long long)desc->reserved_size);
+
+	return buf;
+}
 
 // GBM compatible metadata
 typedef struct gralloc_gbm_android_buffer_info {

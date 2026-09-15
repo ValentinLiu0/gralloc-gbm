@@ -8,7 +8,7 @@
 #include <gralloc_gbm_format.h>
 
 #define LOG_TAG "GrallocGbmMapperV5"
-#include <cutils/log.h>
+#include <private/log.h>
 
 #include <aidl/android/hardware/graphics/allocator/BufferDescriptorInfo.h>
 #include <aidl/android/hardware/graphics/common/BufferUsage.h>
@@ -97,29 +97,29 @@ class GrallocGbmMapperV5 final : public vendor::mapper::IMapperV5Impl {
 AIMapper_Error GrallocGbmMapperV5::importBuffer(const native_handle_t* _Nonnull handle,
 						buffer_handle_t _Nullable* _Nonnull outBufferHandle)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!::is_native_handle_valid(handle)) {
-		ALOGE("importBuffer failed: invalid handle (%p).", handle);
+		LOG_E("importBuffer failed: invalid handle (%p).", handle);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("importBuffer failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("importBuffer failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_NO_RESOURCES;
 		}
 	}
 
 	native_handle_t *importedBufferHandle = native_handle_clone(handle);
 	if (!importedBufferHandle) {
-		ALOGE("importBuffer failed: handle clone failed");
+		LOG_E("importBuffer failed: handle clone failed");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
 	if (gralloc_gbm_android_buffer_import((buffer_handle_t) importedBufferHandle)) {
 		native_handle_close(importedBufferHandle);
 		native_handle_delete(importedBufferHandle);
-		ALOGE("importBuffer failed: GBM operation failed.");
+		LOG_E("importBuffer failed: GBM operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -129,21 +129,21 @@ AIMapper_Error GrallocGbmMapperV5::importBuffer(const native_handle_t* _Nonnull 
 
 AIMapper_Error GrallocGbmMapperV5::freeBuffer(buffer_handle_t _Nonnull buffer)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("freeBuffer failed: invalid buffer (%p).", buffer);
+		LOG_E("freeBuffer failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("freeBuffer failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("freeBuffer failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_NO_RESOURCES;
 		}
 	}
 
 	if (gralloc_gbm_android_buffer_free(buffer)) {
-		ALOGE("freeBuffer failed: GBM operation failed.");
+		LOG_E("freeBuffer failed: GBM operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -153,15 +153,15 @@ AIMapper_Error GrallocGbmMapperV5::freeBuffer(buffer_handle_t _Nonnull buffer)
 AIMapper_Error GrallocGbmMapperV5::getTransportSize(buffer_handle_t _Nonnull buffer, uint32_t* _Nonnull outNumFds,
 						    uint32_t* _Nonnull outNumInts)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("lock failed: invalid buffer (%p).", buffer);
+		LOG_E("lock failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("getTransportSize failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("getTransportSize failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_NO_RESOURCES;
 		}
 	}
@@ -174,26 +174,26 @@ AIMapper_Error GrallocGbmMapperV5::getTransportSize(buffer_handle_t _Nonnull buf
 AIMapper_Error GrallocGbmMapperV5::lock(buffer_handle_t _Nonnull buffer, uint64_t cpuUsage, ARect accessRegion,
 					int acquireFence, void* _Nullable* _Nonnull outData)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("lock failed: invalid buffer (%p).", buffer);
+		LOG_E("lock failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
 	if (cpuUsage == 0) {
-		ALOGE("lock failed: invalid usage.");
+		LOG_E("lock failed: invalid usage.");
 		return AIMAPPER_ERROR_BAD_VALUE;
 	}
 
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("lock failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("lock failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_NO_RESOURCES;
 		}
 	}
 
 	if (gralloc_gbm_android_buffer_lock(buffer, cpuUsage, accessRegion.top, accessRegion.bottom, accessRegion.left, accessRegion.right, outData)) {
-		ALOGE("lock failed: GBM operation failed.");
+		LOG_E("lock failed: GBM operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -202,21 +202,21 @@ AIMapper_Error GrallocGbmMapperV5::lock(buffer_handle_t _Nonnull buffer, uint64_
 
 AIMapper_Error GrallocGbmMapperV5::unlock(buffer_handle_t _Nonnull buffer, int* _Nonnull releaseFence)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("unlock failed: invalid buffer (%p).", buffer);
+		LOG_E("unlock failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("unlock failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("unlock failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_NO_RESOURCES;
 		}
 	}
 	
 	if (gralloc_gbm_android_buffer_unlock(buffer)) {
-		ALOGE("unlock failed: GBM operation failed.");
+		LOG_E("unlock failed: GBM operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -225,15 +225,15 @@ AIMapper_Error GrallocGbmMapperV5::unlock(buffer_handle_t _Nonnull buffer, int* 
 
 AIMapper_Error GrallocGbmMapperV5::flushLockedBuffer(buffer_handle_t _Nonnull buffer)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
-	ALOGD("flushLockedBuffer: no operations for GBM.");
+	LOG_TRACE();
+	LOG_D("flushLockedBuffer: no operations for GBM.");
 	return AIMAPPER_ERROR_NONE;
 }
 
 AIMapper_Error GrallocGbmMapperV5::rereadLockedBuffer(buffer_handle_t _Nonnull buffer)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
-	ALOGD("rereadLockedBuffer: no operations for GBM.");
+	LOG_TRACE();
+	LOG_D("rereadLockedBuffer: no operations for GBM.");
 	return AIMAPPER_ERROR_NONE;
 }
 
@@ -252,16 +252,16 @@ constexpr AIMapper_MetadataTypeDescription newStandardMetadata(StandardMetadataT
 int32_t GrallocGbmMapperV5::getMetadata(buffer_handle_t _Nonnull buffer, AIMapper_MetadataType metadataType,
 					void* _Nonnull outData, size_t outDataSize)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("getMetadata failed: invalid buffer (%p).", buffer);
+		LOG_E("getMetadata failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
 	if (is_standard_metadata(metadataType))
 		return getStandardMetadata(buffer, metadataType.value, outData, outDataSize);
 
-	ALOGE("getMetadata failed: Non-standard metadata (%s) is unsupported!", metadataType.name);
+	LOG_E("getMetadata failed: Non-standard metadata (%s) is unsupported!", metadataType.name);
 	return AIMAPPER_ERROR_UNSUPPORTED;
 }
 
@@ -273,7 +273,7 @@ int32_t grallocGbmQueryAndroidBufferMetadata(buffer_handle_t handle, F&& provide
 {
 	android_buffer_info_t info;
 	if (gralloc_gbm_android_buffer_query(handle, &info)) {
-		ALOGE("grallocGbmQueryAndroidBufferMetadata failed: GBM operation failed.");
+		LOG_E("grallocGbmQueryAndroidBufferMetadata failed: GBM operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -379,23 +379,23 @@ int32_t grallocGbmQueryAndroidBufferMetadata(buffer_handle_t handle, F&& provide
 		return provide(static_cast<int32_t>(info.stride));
 	}
 
-	ALOGW("Unknown metadata type: %s", toString(metadataType).c_str());
+	LOG_W("Unknown metadata type: %s", toString(metadataType).c_str());
 	return AIMAPPER_ERROR_UNSUPPORTED;
 }
 
 int32_t GrallocGbmMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buffer, int64_t standardMetadataType,
 						void* _Nonnull outData, size_t outDataSize)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("getStandardMetadata failed: invalid buffer (%p).", buffer);
+		LOG_E("getStandardMetadata failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 	// Convert the int64_t to StandardMetadataType enum and get readable name
 	StandardMetadataType metadataTypeEnum = static_cast<StandardMetadataType>(standardMetadataType);
 	std::string metadataTypeName = toString(metadataTypeEnum);
 
-	ALOGV("get standard metadata %s", metadataTypeName.c_str());
+	LOG_V("get standard metadata %s", metadataTypeName.c_str());
 
 	auto provider = [&]<StandardMetadataType T>(auto&& provide) -> int32_t {
 		return grallocGbmQueryAndroidBufferMetadata(buffer, provide, StandardMetadata<T>{});
@@ -410,16 +410,16 @@ int32_t GrallocGbmMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buffer,
 AIMapper_Error GrallocGbmMapperV5::setMetadata(buffer_handle_t _Nonnull buffer, AIMapper_MetadataType metadataType,
 					       const void* _Nonnull metadata, size_t metadataSize)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("setMetadata failed: invalid buffer (%p).", buffer);
+		LOG_E("setMetadata failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
 	if (is_standard_metadata(metadataType))
 		return setStandardMetadata(buffer, metadataType.value, metadata, metadataSize);
 
-	ALOGE("setMetadata failed: Non-standard metadata (%s) is unsupported!", metadataType.name);
+	LOG_E("setMetadata failed: Non-standard metadata (%s) is unsupported!", metadataType.name);
 	return AIMAPPER_ERROR_UNSUPPORTED;
 }
 
@@ -427,19 +427,19 @@ AIMapper_Error GrallocGbmMapperV5::setStandardMetadata(buffer_handle_t _Nonnull 
 						       int64_t standardMetadataType, const void* _Nonnull metadata,
 						       size_t metadataSize)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("setStandardMetadata failed: invalid buffer (%p).", buffer);
+		LOG_E("setStandardMetadata failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 	// Convert the int64_t to StandardMetadataType enum and get readable name
 	StandardMetadataType metadataTypeEnum = static_cast<StandardMetadataType>(standardMetadataType);
 	std::string metadataTypeName = toString(metadataTypeEnum);
 
-	ALOGV("set standard metadata %s (size: %zu)", metadataTypeName.c_str(), metadataSize);
+	LOG_V("set standard metadata %s (size: %zu)", metadataTypeName.c_str(), metadataSize);
 	gbm_bo_data_t *bo_data = gralloc_gbm_android_buffer_get_extdata(buffer);
 	if (!bo_data) {
-		ALOGE("setStandardMetadata failed: Unable to find the extend data of buffer!");
+		LOG_E("setStandardMetadata failed: Unable to find the extend data of buffer!");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -454,24 +454,24 @@ AIMapper_Error GrallocGbmMapperV5::setStandardMetadata(buffer_handle_t _Nonnull 
         case StandardMetadataType::PIXEL_FORMAT_MODIFIER:
         case StandardMetadataType::USAGE:
         case StandardMetadataType::STRIDE:
-		ALOGE("setStandardMetadata failed: Read-only metadata type (%s).", metadataTypeName.c_str());
+		LOG_E("setStandardMetadata failed: Read-only metadata type (%s).", metadataTypeName.c_str());
 		return AIMAPPER_ERROR_BAD_VALUE;
 	case StandardMetadataType::DATASPACE:
 		bo_data->dataspace = static_cast<int32_t>(*(Dataspace *)metadata);
-		ALOGV("set DATASPACE to %d, received %d (%s)", bo_data->dataspace, *(Dataspace *)metadata, toString(*(Dataspace *)metadata).c_str());
+		LOG_V("set DATASPACE to %d, received %d (%s)", bo_data->dataspace, *(Dataspace *)metadata, toString(*(Dataspace *)metadata).c_str());
 		break;
 	case StandardMetadataType::BLEND_MODE:
 		bo_data->blend_mode = static_cast<int32_t>(*(BlendMode *)metadata);
-		ALOGV("set BLEND_MODE to %d, received %d (%s)", bo_data->blend_mode, *(BlendMode *)metadata, toString(*(BlendMode *)metadata).c_str());
+		LOG_V("set BLEND_MODE to %d, received %d (%s)", bo_data->blend_mode, *(BlendMode *)metadata, toString(*(BlendMode *)metadata).c_str());
 		break;
 	case StandardMetadataType::SMPTE2086:
 	case StandardMetadataType::CTA861_3:
 	case StandardMetadataType::SMPTE2094_40:
 	case StandardMetadataType::SMPTE2094_10:
-		ALOGW("known metadata type but not implemented (%s).", metadataTypeName.c_str());
+		LOG_W("known metadata type but not implemented (%s).", metadataTypeName.c_str());
 		break;
 	default:
-		ALOGD("unsupported metadata type (%s).", metadataTypeName.c_str());
+		LOG_D("unsupported metadata type (%s).", metadataTypeName.c_str());
 	}
 
 	return AIMAPPER_ERROR_NONE;
@@ -504,7 +504,7 @@ static constexpr std::array<AIMapper_MetadataTypeDescription, 19> sSupportedMeta
 AIMapper_Error GrallocGbmMapperV5::listSupportedMetadataTypes(const AIMapper_MetadataTypeDescription* _Nullable* _Nonnull outDescriptionList,
 							      size_t* _Nonnull outNumberOfDescriptions)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	*outDescriptionList = sSupportedMetadataTypes.data();
 	*outNumberOfDescriptions = sSupportedMetadataTypes.size();
 
@@ -515,15 +515,15 @@ AIMapper_Error GrallocGbmMapperV5::dumpBuffer(buffer_handle_t _Nonnull bufferHan
 					      AIMapper_DumpBufferCallback _Nonnull dumpBufferCallback,
 					      void* _Null_unspecified context)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!bufferHandle) {
-		ALOGE("dumpBuffer failed: invalid buffer (%p).", bufferHandle);
+		LOG_E("dumpBuffer failed: invalid buffer (%p).", bufferHandle);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 	
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("dumpBuffer failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("dumpBuffer failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_UNSUPPORTED;
 		}
 	}
@@ -539,11 +539,11 @@ AIMapper_Error GrallocGbmMapperV5::dumpAllBuffers(AIMapper_BeginDumpBufferCallba
 				  		  AIMapper_DumpBufferCallback _Nonnull dumpBufferCallback,
 				  		  void* _Null_unspecified context)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("dumpAllBuffers failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("dumpAllBuffers failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_UNSUPPORTED;
 		}
 	}
@@ -561,29 +561,29 @@ AIMapper_Error GrallocGbmMapperV5::getReservedRegion(buffer_handle_t _Nonnull bu
 						     void* _Nullable* _Nonnull outReservedRegion,
 						     uint64_t* _Nonnull outReservedSize)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!buffer) {
-		ALOGE("getReservedRegion failed: invalid buffer (%p).", buffer);
+		LOG_E("getReservedRegion failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 	
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("getReservedRegion failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("getReservedRegion failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_UNSUPPORTED;
 		}
 	}
 
 	*outReservedRegion = nullptr;
 	*outReservedSize = 0;
-	ALOGW("We currently not support reserved region.");
+	LOG_W("We currently not support reserved region.");
 	return AIMAPPER_ERROR_NONE;
 }
 
 extern "C" uint32_t ANDROID_HAL_MAPPER_VERSION = AIMAPPER_VERSION_5;
 
 extern "C" AIMapper_Error AIMapper_loadIMapper(AIMapper* _Nullable* _Nonnull outImplementation) {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	assert(outImplementation);
 
 	static vendor::mapper::IMapperProvider<GrallocGbmMapperV5> provider;

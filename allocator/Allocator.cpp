@@ -13,7 +13,7 @@
 #include "Allocator.h"
 
 #define LOG_TAG "GrallocGbmAllocatorV2"
-#include <cutils/log.h>
+#include <private/log.h>
 
 using aidl::android::hardware::common::NativeHandle;
 using aidl::android::hardware::graphics::common::ExtendableType;
@@ -29,20 +29,20 @@ inline ndk::ScopedAStatus ToBinderStatus(AllocationError error) {
 
 int GrallocGbmAllocatorV2::init(void)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	return gralloc_gbm_init();
 }
 
 ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocGbmDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!outResult) {
-		ALOGE("generateGrallocGbmDesc failed: Invalid out pointer.");
+		LOG_E("generateGrallocGbmDesc failed: Invalid out pointer.");
 		return ToBinderStatus(AllocationError::NO_RESOURCES);
 	}
 
 	if (info.width == 0 || info.height == 0) {
-		ALOGE("generateGrallocGbmDesc failed: Invalid buffer descriptor: width or height is zero");
+		LOG_E("generateGrallocGbmDesc failed: Invalid buffer descriptor: width or height is zero");
 		return ToBinderStatus(AllocationError::BAD_DESCRIPTOR);
 	}
 
@@ -51,7 +51,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocGbmDesc(const BufferDes
 
 	// TODO: Add multiple layer support.
 	if (info.layerCount > 1) {
-		ALOGE("generateGrallocGbmDesc failed: Failed to convert descriptor. Unsupported layerCount: %d", info.layerCount);
+		LOG_E("generateGrallocGbmDesc failed: Failed to convert descriptor. Unsupported layerCount: %d", info.layerCount);
 		return ToBinderStatus(AllocationError::UNSUPPORTED);
 	}
 
@@ -69,10 +69,10 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocGbmDesc(const BufferDes
 ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocGbmAllocate(allocator_desc_t& desc, int32_t count, 
 							     allocator::AllocationResult* outResult)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("grallocGbmAllocate failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("grallocGbmAllocate failed: Failed to initialize the gralloc_gbm driver");
 			return ToBinderStatus(AllocationError::NO_RESOURCES);
 		}
 	}
@@ -86,7 +86,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocGbmAllocate(allocator_desc_t& d
 		uint32_t gbm_stride = 0;
 		int ret = gralloc_gbm_android_buffer_new(&desc, &gbm_stride, &handle);
 		if (ret || !handle) {
-			ALOGE("grallocGbmAllocate failed: GBM operation failed.");
+			LOG_E("grallocGbmAllocate failed: GBM operation failed, ret=%d", ret);
 			for (int32_t j = 0; j < i; j++) {
 				// Release all buffer and handle
 				if (!handles[j])
@@ -120,10 +120,10 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocGbmAllocate(allocator_desc_t& d
 ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate(const std::vector<uint8_t>& encodedDescriptor, int32_t count,
 						   allocator::AllocationResult* outResult)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("allocate failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("allocate failed: Failed to initialize the gralloc_gbm driver");
 			return ToBinderStatus(AllocationError::NO_RESOURCES);
 		}
 	}
@@ -131,7 +131,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate(const std::vector<uint8_t>& e
 	BufferDescriptorInfoV4 mapperV4Descriptor;
 	int ret = ::android::gralloc4::decodeBufferDescriptorInfo(encodedDescriptor, &mapperV4Descriptor);
 	if (ret) {
-		ALOGE("allocate failed: call decodeBufferDescriptorInfo() failed, ret=%d.", ret);
+		LOG_E("allocate failed: call decodeBufferDescriptorInfo() failed, ret=%d.", ret);
 		return ToBinderStatus(AllocationError::BAD_DESCRIPTOR);
 	}
 
@@ -151,16 +151,16 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate(const std::vector<uint8_t>& e
 ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate2(const BufferDescriptorInfo& descriptor, int32_t count,
 						    allocator::AllocationResult* outResult)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	allocator_desc_t grallocGbmDesc = {};
 	ndk::ScopedAStatus status = generateGrallocGbmDesc(descriptor, &grallocGbmDesc);
 	if (!status.isOk()) {
-		ALOGE("allocate2 failed: Failed to convert the request buffer desc to Gralloc GBM desc.\n");
+		LOG_E("allocate2 failed: Failed to convert the request buffer desc to Gralloc GBM desc.\n");
 		return ToBinderStatus(AllocationError::UNSUPPORTED);
 	}
 
 	if (!gralloc_gbm_is_allocator_desc_supported(&grallocGbmDesc)) {
-		ALOGE("allocate2 failed: The requested desc is unsupported by the driver.\n");
+		LOG_E("allocate2 failed: The requested desc is unsupported by the driver.\n");
 		return ToBinderStatus(AllocationError::UNSUPPORTED);
 	}
 
@@ -170,10 +170,10 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate2(const BufferDescriptorInfo& 
 ndk::ScopedAStatus GrallocGbmAllocatorV2::isSupported(const BufferDescriptorInfo& descriptor,
 						      bool* outResult)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			ALOGE("isSupported failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("isSupported failed: Failed to initialize the gralloc_gbm driver");
 			return ToBinderStatus(AllocationError::NO_RESOURCES);;
 		}
 	}
@@ -189,7 +189,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::isSupported(const BufferDescriptorInfo
 	allocator_desc_t grallocGbmDesc = {};
 	ndk::ScopedAStatus status = generateGrallocGbmDesc(descriptor, &grallocGbmDesc);
 	if (!status.isOk()) {
-		ALOGE("isSupported failed: Failed to convert the request buffer desc to Gralloc GBM desc.\n");
+		LOG_E("isSupported failed: Failed to convert the request buffer desc to Gralloc GBM desc.\n");
 		return ToBinderStatus(AllocationError::UNSUPPORTED);
 	}
 	
@@ -199,7 +199,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::isSupported(const BufferDescriptorInfo
 
 ndk::ScopedAStatus GrallocGbmAllocatorV2::getIMapperLibrarySuffix(std::string* outResult)
 {
-	ALOGV("%s:%d %s", __FILE_NAME__, __LINE__, __FUNCTION__);
+	LOG_TRACE();
 	*outResult = "gbm";
 	return ndk::ScopedAStatus::ok();
 }

@@ -11,9 +11,6 @@
 
 #include <gralloc_gbm_format.h>
 
-#define LOG_TAG "MapperPlaneLayouts"
-#include <cutils/log.h>
-
 #include <gralloctypes/Gralloc4.h>
 
 using namespace ::aidl::android::hardware::graphics::common;
@@ -571,10 +568,8 @@ inline int getPlaneLayouts(uint32_t gbm_format, std::vector<PlaneLayout>* outPla
 {
 	const auto& planeLayoutsMap = GetPlaneLayoutsMap();
 	const auto it = planeLayoutsMap.find(gbm_format);
-	if (it == planeLayoutsMap.end()) {
-		ALOGE("getPlaneLayouts failed: Unknown plane layout for format %d", gbm_format);
+	if (it == planeLayoutsMap.end())
 		return -EINVAL;
-	}
 
 	*outPlaneLayouts = it->second;
 	return 0;

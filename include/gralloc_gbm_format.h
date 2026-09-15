@@ -89,7 +89,9 @@ static inline const char *color_fmt_getname(const uint32_t fmt, const bool is_gb
 				return color_format_map[i].android_name;
 		}
 	}
-	return "(no matched format)";
+	static char buf[256];
+	snprintf(buf, sizeof(buf), "(no matched format for %u)", fmt);
+	return buf;
 }
 
 typedef struct gralloc_gbm_gbm_color_bpp {

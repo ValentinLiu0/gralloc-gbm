@@ -94,7 +94,7 @@ static inline native_handle_t *gralloc_handle_create(int32_t width,
 							GRALLOC_HANDLE_NUM_INTS);
 
 	if (!nhandle)
-		return NULL;
+		return nullptr;
 
 	handle = gralloc_handle(nhandle);
 	handle->magic = GRALLOC_HANDLE_MAGIC;
