@@ -14,6 +14,11 @@
 
 #define GRALLOC_GBM_WIDTH_MAX 65535
 #define GRALLOC_GBM_HEIGHT_MAX 65535
+/**
+ * Supported macros:
+ *
+ * GRALLOC_GBM_USE_SW_RENDER
+ */
 
 #ifndef __nullable
 #define __nullable
@@ -125,7 +130,7 @@ typedef struct gralloc_gbm_android_buffer_info {
 
 /* Gralloc GBM Android platform functions */
 int32_t gralloc_gbm_caculate_android_pixel_stride(const int32_t android_format, const uint32_t gbm_stride /*pitch*/);
-uint_t gralloc_gbm_caculate_gbm_flags(const int usage, const int gbm_format);
+uint_t gralloc_gbm_calculate_gbm_flags(const int usage, const int gbm_format);
 bool gralloc_gbm_is_allocator_desc_supported(const allocator_desc_t *desc);
 int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *out_stride, native_handle_t **out_buffer_handle);
 int gralloc_gbm_android_buffer_import(const buffer_handle_t handle);
