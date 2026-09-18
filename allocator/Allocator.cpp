@@ -159,11 +159,6 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate2(const BufferDescriptorInfo& 
 		return ToBinderStatus(AllocationError::UNSUPPORTED);
 	}
 
-	if (!gralloc_gbm_is_allocator_desc_supported(&grallocGbmDesc)) {
-		LOG_E("allocate2 failed: The requested desc is unsupported by the driver.\n");
-		return ToBinderStatus(AllocationError::UNSUPPORTED);
-	}
-
 	return grallocGbmAllocate(grallocGbmDesc, count, outResult);
 }
 
