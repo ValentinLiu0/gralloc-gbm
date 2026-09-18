@@ -18,6 +18,25 @@
 extern "C" {
 #endif
 
+// Smpte2086.h
+typedef struct gralloc_gbm_smpte2086 {
+	float primary_red_x;
+	float primary_red_y;
+	float primary_green_x;
+	float primary_green_y;
+	float primary_blue_x;
+	float primary_blue_y;
+	float white_point_x;
+	float white_point_y;
+	float max_luminance;
+	float min_luminance;
+} gralloc_gbm_smpte2086_t, smpte2086_t;
+
+// Cta861_3.h
+typedef struct gralloc_gbm_cta861_3 {
+	float max_content_light_level;
+	float max_frame_average_light_level;
+} gralloc_gbm_cta861_3_t, cta861_3_t;
 
 typedef struct gralloc_gbm_bo_data {
 	void *map_data;
@@ -28,6 +47,8 @@ typedef struct gralloc_gbm_bo_data {
 
 	int32_t dataspace;
 	int32_t blend_mode;
+	smpte2086_t *smpte2086;
+	cta861_3_t *cta861_3;
 } gralloc_gbm_bo_data_t, gbm_bo_data_t;
 
 
