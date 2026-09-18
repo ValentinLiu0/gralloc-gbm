@@ -184,7 +184,7 @@ const gralloc_gbm_driver_t *gralloc_gbm_get(void)
 	return g_driver;
 }
 
-inline gbm_bo_data_t *gralloc_gbm_bo_user_data_init(struct gbm_bo *bo)
+gbm_bo_data_t *gralloc_gbm_bo_user_data_init(struct gbm_bo *bo)
 {
 	LOG_TRACE();
 	if (!bo)
