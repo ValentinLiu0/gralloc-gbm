@@ -376,11 +376,9 @@ int32_t grallocGbmQueryAndroidBufferMetadata(buffer_handle_t handle, F&& provide
 		return provide(cta861_3);
 	}
 	if constexpr (metadataType == StandardMetadataType::SMPTE2094_40) {
-		std::optional<Smpte2086> smpte;
 		return AIMAPPER_ERROR_UNSUPPORTED;
 	}
 	if constexpr (metadataType == StandardMetadataType::SMPTE2094_10) {
-		std::optional<Smpte2086> smpte;
 		return AIMAPPER_ERROR_UNSUPPORTED;
 	}
 	if constexpr (metadataType == StandardMetadataType::STRIDE) {
