@@ -40,6 +40,7 @@ cc_library_shared {
         "-Wcast-qual",
         "-Wcast-align",
         "-Wno-unused-parameter",
+	"-DGRALLOC_GBM_NO_CURSOR_RENDERING"
     ],
     product_variables: {
         platform_sdk_version: {

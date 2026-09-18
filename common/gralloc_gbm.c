@@ -298,14 +298,16 @@ uint_t gralloc_gbm_calculate_gbm_flags(const int usage, const int gbm_format)
 
 	/* Only warning here, check flags in function gralloc_gbm_is_allocator_desc_supported() */
 	if (flags & GBM_BO_USE_WRITE) {
-		LOG_W("The flag GBM_BO_USE_WRITE is detected, a dumb buffer will be created by the DRI backend!");
 		if (!!(flags & GBM_BO_USE_CURSOR) && gbm_format != GBM_FORMAT_ARGB8888)
-			LOG_W("Using unsupported color format (%s) with GBM_BO_USE_CURSOR flag.",
-			      color_fmt_getname(gbm_format, true));
+			return flags;
 		
 		if (!!(flags & GBM_BO_USE_SCANOUT) && (gbm_format != GBM_FORMAT_XRGB8888 && gbm_format != GBM_FORMAT_XBGR8888))
-			LOG_W("Using unsupported color format (%s) with GBM_BO_USE_SCANOUT flag.",
-			      color_fmt_getname(gbm_format, true));
+			return flags;
+	}
+	if ((flags & GBM_BO_USE_CURSOR) && (flags & GBM_BO_USE_RENDERING)) {
+#ifdef GRALLOC_GBM_NO_CURSOR_RENDERING
+		flags &= ~GBM_BO_USE_CURSOR;
+#endif
 	}
 
 	if (flags == GBM_BO_USE_NONE)
@@ -347,12 +349,32 @@ bool gralloc_gbm_is_allocator_desc_supported(const allocator_desc_t *desc)
 	 * }
 	 */
 	if (flags & GBM_BO_USE_WRITE) {
-		if (!!(flags & GBM_BO_USE_CURSOR) && gbm_format != GBM_FORMAT_ARGB8888)
+		LOG_W("The flag GBM_BO_USE_WRITE is detected, a dumb buffer will be created by the DRI backend!");
+		if (!!(flags & GBM_BO_USE_CURSOR) && gbm_format != GBM_FORMAT_ARGB8888) {
+			LOG_E("Using unsupported color format (%s) with GBM_BO_USE_CURSOR flag.",
+			      color_fmt_getname(gbm_format, true));
 			return false;
+		}
 		
-		if (!!(flags & GBM_BO_USE_SCANOUT) && (gbm_format != GBM_FORMAT_XRGB8888 && gbm_format != GBM_FORMAT_XBGR8888))
+		if (!!(flags & GBM_BO_USE_SCANOUT) && (gbm_format != GBM_FORMAT_XRGB8888 && gbm_format != GBM_FORMAT_XBGR8888)) {
+			LOG_E("Using unsupported color format (%s) with GBM_BO_USE_SCANOUT flag.",
+			      color_fmt_getname(gbm_format, true));
 			return false;
+		}
 	}
+	/**
+	 * GBM DRI backend didn't support the flags exist both GBM_BO_USE_CURSOR and GBM_BO_USE_RENDERING
+	 *
+	 * A part of source code in 'gbm_dri.c' of function gbm_dri_is_format_supported():
+	 * if ((usage & GBM_BO_USE_CURSOR) && (usage & GBM_BO_USE_RENDERING))
+	 *    return 0;
+	 */
+	if ((flags & GBM_BO_USE_CURSOR) && (flags & GBM_BO_USE_RENDERING))
+#ifndef GRALLOC_GBM_NO_CURSOR_RENDERING
+		return false;
+#else
+		LOG_W("Both GBM_BO_USE_CURSOR and GBM_BO_USE_RENDERING existed, drop GBM_BO_USE_CURSOR while calculating.");
+#endif
 
 	if (!gbm_device_is_format_supported(g_driver->gbm_dev, gbm_format, flags))
 		return false;
@@ -382,8 +404,12 @@ int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *
 	int32_t width = desc->width;
 	int32_t height = desc->height;
 	if (flags & GBM_BO_USE_CURSOR) {
-		width = ALIGN(MAX(desc->width, 64), 16);
-		height = ALIGN(MAX(desc->height, 64), 16);
+		width = MAX(desc->width, 64);
+		height = MAX(desc->height, 64);
+#ifndef GRALLOC_GBM_NO_CURSOR_ALIGNING
+		width = ALIGN(width, 4);
+		height = ALIGN(height, 4);
+#endif
 		LOG_V("Aligned size for cursor from %dx%d to %dx%d.", desc->width, desc->height, width, height);
 	}
 	/*
@@ -471,10 +497,16 @@ int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 		fd_data->height = ghandle->height + ALIGN(ghandle->height, 2) / 2;
 	}
 
+	uint32_t flags = gralloc_gbm_calculate_gbm_flags(ghandle->usage, fd_data->format);
+
 	/* Some GPUs require 64 pixels at least for cursor */
-	if (ghandle->usage & GRALLOC_USAGE_CURSOR) {
-		fd_data->width = ALIGN(MAX(ghandle->width, 64), 16);
-		fd_data->height = ALIGN(MAX(ghandle->height, 64), 16);
+	if (flags & GBM_BO_USE_CURSOR) {
+		fd_data->width = MAX(ghandle->width, 64);
+		fd_data->height = MAX(ghandle->height, 64);
+#ifndef GRALLOC_GBM_NO_CURSOR_ALIGNING
+		fd_data->width = ALIGN(fd_data->width, 4);
+		fd_data->height = ALIGN(fd_data->height, 4);
+#endif
 		LOG_V("Aligned size for cursor from %dx%d to %dx%d.", ghandle->width, ghandle->height, fd_data->width, fd_data->height);
 	}
 
@@ -483,7 +515,6 @@ int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 	fd_data->fds[0] = ghandle->prime_fd;
 	fd_data->strides[0] = ghandle->stride;
 
-	uint32_t flags = gralloc_gbm_calculate_gbm_flags(ghandle->usage, fd_data->format);
 	bo = gbm_bo_import(g_driver->gbm_dev, GBM_BO_IMPORT_FD_MODIFIER, fd_data, flags);
 	if (!bo) {
 		LOG_E("Failed to import buffer object (%ux%u), fmt=%s, flags=0x%x.",

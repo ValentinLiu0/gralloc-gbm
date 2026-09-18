@@ -18,6 +18,10 @@
  * Supported macros:
  *
  * GRALLOC_GBM_USE_SW_RENDER
+ * GRALLOC_GBM_NO_CURSOR_RENDERING - 
+ *     Remove GBM_BO_USE_CURSOR flag if there are both GBM_BO_USE_CURSOR and GBM_BO_USE_RENDERING in flags
+ * GRALLOC_GBM_NO_CURSOR_ALIGNING -
+ *     Disable aligning width and height with 4 for cursor.
  */
 
 #ifndef __nullable
