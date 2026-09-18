@@ -128,10 +128,7 @@ typedef struct gralloc_gbm_android_buffer_info {
 	int32_t stride;
 	bool is_protected;
 
-	int32_t dataspace;
-	int32_t blend_mode;
-	smpte2086_t *smpte2086;
-	cta861_3_t *cta861_3;
+	struct android_metadata metadata;
 } gralloc_gbm_android_buffer_info_t, android_buffer_info_t;
 
 /* Gralloc GBM Android platform functions */

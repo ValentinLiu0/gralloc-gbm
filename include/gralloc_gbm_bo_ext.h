@@ -38,17 +38,20 @@ typedef struct gralloc_gbm_cta861_3 {
 	float max_frame_average_light_level;
 } gralloc_gbm_cta861_3_t, cta861_3_t;
 
+struct android_metadata {
+	int32_t dataspace;
+	int32_t blend_mode;
+	smpte2086_t *smpte2086;
+	cta861_3_t *cta861_3;
+};
+
 typedef struct gralloc_gbm_bo_data {
 	void *map_data;
 	int lock_count;
 	int locked_for;
 
 	/* Android Graphics Metadata Support */
-
-	int32_t dataspace;
-	int32_t blend_mode;
-	smpte2086_t *smpte2086;
-	cta861_3_t *cta861_3;
+	struct android_metadata metadata;
 } gralloc_gbm_bo_data_t, gbm_bo_data_t;
 
 

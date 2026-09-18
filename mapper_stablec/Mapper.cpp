@@ -354,25 +354,25 @@ int32_t grallocGbmQueryAndroidBufferMetadata(buffer_handle_t handle, F&& provide
 		return provide(crops);
 	}
 	if constexpr (metadataType == StandardMetadataType::DATASPACE) {
-		return provide(static_cast<Dataspace>(info.dataspace));
+		return provide(static_cast<Dataspace>(info.metadata.dataspace));
 	}
 	if constexpr (metadataType == StandardMetadataType::BLEND_MODE) {
-		return provide(static_cast<BlendMode>(info.dataspace));
+		return provide(static_cast<BlendMode>(info.metadata.dataspace));
 	}
 	if constexpr (metadataType == StandardMetadataType::SMPTE2086) {
 		std::optional<Smpte2086> smpte2086;
-		smpte2086->primaryRed = XyColor(info.smpte2086->primary_red_x, info.smpte2086->primary_red_y);
-		smpte2086->primaryGreen = XyColor(info.smpte2086->primary_green_x, info.smpte2086->primary_green_y);
-		smpte2086->primaryBlue = XyColor(info.smpte2086->primary_blue_x, info.smpte2086->primary_blue_y);
-		smpte2086->whitePoint = XyColor(info.smpte2086->white_point_x, info.smpte2086->white_point_y);
-		smpte2086->maxLuminance = info.smpte2086->max_luminance;
-		smpte2086->minLuminance = info.smpte2086->min_luminance;
+		smpte2086->primaryRed = XyColor(info.metadata.smpte2086->primary_red_x, info.metadata.smpte2086->primary_red_y);
+		smpte2086->primaryGreen = XyColor(info.metadata.smpte2086->primary_green_x, info.metadata.smpte2086->primary_green_y);
+		smpte2086->primaryBlue = XyColor(info.metadata.smpte2086->primary_blue_x, info.metadata.smpte2086->primary_blue_y);
+		smpte2086->whitePoint = XyColor(info.metadata.smpte2086->white_point_x, info.metadata.smpte2086->white_point_y);
+		smpte2086->maxLuminance = info.metadata.smpte2086->max_luminance;
+		smpte2086->minLuminance = info.metadata.smpte2086->min_luminance;
 		return provide(smpte2086);
 	}
 	if constexpr (metadataType == StandardMetadataType::CTA861_3) {
 		std::optional<Cta861_3> cta861_3;
-		cta861_3->maxContentLightLevel = info.cta861_3->max_content_light_level;
-		cta861_3->maxFrameAverageLightLevel = info.cta861_3->max_frame_average_light_level;
+		cta861_3->maxContentLightLevel = info.metadata.cta861_3->max_content_light_level;
+		cta861_3->maxFrameAverageLightLevel = info.metadata.cta861_3->max_frame_average_light_level;
 		return provide(cta861_3);
 	}
 	if constexpr (metadataType == StandardMetadataType::SMPTE2094_40) {
@@ -469,32 +469,32 @@ AIMapper_Error GrallocGbmMapperV5::setStandardMetadata(buffer_handle_t _Nonnull 
 		LOG_E("setStandardMetadata failed: Read-only metadata type (%s).", metadataTypeName.c_str());
 		return AIMAPPER_ERROR_BAD_VALUE;
 	case StandardMetadataType::DATASPACE:
-		bo_data->dataspace = static_cast<int32_t>(*(Dataspace *)metadata);
-		LOG_V("set DATASPACE to %d, received %d (%s)", bo_data->dataspace, *(Dataspace *)metadata, toString(*(Dataspace *)metadata).c_str());
+		bo_data->metadata.dataspace = static_cast<int32_t>(*(Dataspace *)metadata);
+		LOG_V("set DATASPACE to %d, received %d (%s)", bo_data->metadata.dataspace, *(Dataspace *)metadata, toString(*(Dataspace *)metadata).c_str());
 		break;
 	case StandardMetadataType::BLEND_MODE:
-		bo_data->blend_mode = static_cast<int32_t>(*(BlendMode *)metadata);
-		LOG_V("set BLEND_MODE to %d, received %d (%s)", bo_data->blend_mode, *(BlendMode *)metadata, toString(*(BlendMode *)metadata).c_str());
+		bo_data->metadata.blend_mode = static_cast<int32_t>(*(BlendMode *)metadata);
+		LOG_V("set BLEND_MODE to %d, received %d (%s)", bo_data->metadata.blend_mode, *(BlendMode *)metadata, toString(*(BlendMode *)metadata).c_str());
 		break;
 	case StandardMetadataType::SMPTE2086:
 		assert(bo_data->smpte2086);
-		bo_data->smpte2086->primary_red_x = static_cast<const Smpte2086*>(metadata)->primaryRed.x;
-		bo_data->smpte2086->primary_red_y = static_cast<const Smpte2086*>(metadata)->primaryRed.y;
-		bo_data->smpte2086->primary_green_x = static_cast<const Smpte2086*>(metadata)->primaryGreen.x;
-		bo_data->smpte2086->primary_green_y = static_cast<const Smpte2086*>(metadata)->primaryGreen.y;
-		bo_data->smpte2086->primary_blue_x = static_cast<const Smpte2086*>(metadata)->primaryBlue.x;
-		bo_data->smpte2086->primary_blue_y = static_cast<const Smpte2086*>(metadata)->primaryBlue.y;
-		bo_data->smpte2086->white_point_x = static_cast<const Smpte2086*>(metadata)->whitePoint.x;
-		bo_data->smpte2086->white_point_y = static_cast<const Smpte2086*>(metadata)->whitePoint.y;
-		bo_data->smpte2086->max_luminance = static_cast<const Smpte2086*>(metadata)->maxLuminance;
-		bo_data->smpte2086->min_luminance = static_cast<const Smpte2086*>(metadata)->minLuminance;
-		LOG_V("set SMPTE2086 to address %p, received %s", bo_data->smpte2086, static_cast<const Smpte2086*>(metadata)->toString().c_str());
+		bo_data->metadata.smpte2086->primary_red_x = static_cast<const Smpte2086*>(metadata)->primaryRed.x;
+		bo_data->metadata.smpte2086->primary_red_y = static_cast<const Smpte2086*>(metadata)->primaryRed.y;
+		bo_data->metadata.smpte2086->primary_green_x = static_cast<const Smpte2086*>(metadata)->primaryGreen.x;
+		bo_data->metadata.smpte2086->primary_green_y = static_cast<const Smpte2086*>(metadata)->primaryGreen.y;
+		bo_data->metadata.smpte2086->primary_blue_x = static_cast<const Smpte2086*>(metadata)->primaryBlue.x;
+		bo_data->metadata.smpte2086->primary_blue_y = static_cast<const Smpte2086*>(metadata)->primaryBlue.y;
+		bo_data->metadata.smpte2086->white_point_x = static_cast<const Smpte2086*>(metadata)->whitePoint.x;
+		bo_data->metadata.smpte2086->white_point_y = static_cast<const Smpte2086*>(metadata)->whitePoint.y;
+		bo_data->metadata.smpte2086->max_luminance = static_cast<const Smpte2086*>(metadata)->maxLuminance;
+		bo_data->metadata.smpte2086->min_luminance = static_cast<const Smpte2086*>(metadata)->minLuminance;
+		LOG_V("set SMPTE2086 to address %p, received %s", bo_data->metadata.smpte2086, static_cast<const Smpte2086*>(metadata)->toString().c_str());
 		break;
 	case StandardMetadataType::CTA861_3:
 		assert(bo_data->cta861_3);
-		bo_data->cta861_3->max_content_light_level = static_cast<const Cta861_3*>(metadata)->maxContentLightLevel;
-		bo_data->cta861_3->max_frame_average_light_level = static_cast<const Cta861_3*>(metadata)->maxFrameAverageLightLevel;
-		LOG_V("set CTA861_3 to address %p, received %s", bo_data->cta861_3, static_cast<const Cta861_3*>(metadata)->toString().c_str());
+		bo_data->metadata.cta861_3->max_content_light_level = static_cast<const Cta861_3*>(metadata)->maxContentLightLevel;
+		bo_data->metadata.cta861_3->max_frame_average_light_level = static_cast<const Cta861_3*>(metadata)->maxFrameAverageLightLevel;
+		LOG_V("set CTA861_3 to address %p, received %s", bo_data->metadata.cta861_3, static_cast<const Cta861_3*>(metadata)->toString().c_str());
 		break;
 	case StandardMetadataType::SMPTE2094_40:
 	case StandardMetadataType::SMPTE2094_10:

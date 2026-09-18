@@ -168,8 +168,8 @@ int gralloc_gbm_deinit(void)
 void gralloc_gbm_bo_data_destroy(struct gbm_bo *bo, void *data) {
 	LOG_TRACE();
 	gbm_bo_data_t *bo_data = (gbm_bo_data_t *) data;
-	free(bo_data->smpte2086);
-	free(bo_data->cta861_3);
+	free(bo_data->metadata.smpte2086);
+	free(bo_data->metadata.cta861_3);
 	free(bo_data);
 
 	(void)bo;
@@ -194,8 +194,8 @@ inline gbm_bo_data_t *gralloc_gbm_bo_user_data_init(struct gbm_bo *bo)
 	if (!bo_data) {
 		LOG_V("%s: no user data found in BO (%p), set a new one.", __func__, bo);
 		bo_data = calloc(1, sizeof(gbm_bo_data_t));
-		bo_data->smpte2086 = calloc(1, sizeof(smpte2086_t));
-		bo_data->cta861_3 = calloc(1, sizeof(cta861_3_t));
+		bo_data->metadata.smpte2086 = calloc(1, sizeof(smpte2086_t));
+		bo_data->metadata.cta861_3 = calloc(1, sizeof(cta861_3_t));
 		gbm_bo_set_user_data(bo, bo_data, gralloc_gbm_bo_data_destroy);
 	}
 
@@ -685,10 +685,10 @@ int gralloc_gbm_android_buffer_query(const buffer_handle_t handle, android_buffe
 	info.modifier = gbm_bo_get_modifier(bo);
 
 	gbm_bo_data_t *bo_data = gralloc_gbm_bo_user_data_init(bo);
-	info.dataspace = bo_data->dataspace;
-	info.blend_mode = bo_data->blend_mode;
-	info.smpte2086 = bo_data->smpte2086;
-	info.cta861_3 = bo_data->cta861_3;
+	info.metadata.dataspace = bo_data->metadata.dataspace;
+	info.metadata.blend_mode = bo_data->metadata.blend_mode;
+	info.metadata.smpte2086 = bo_data->metadata.smpte2086;
+	info.metadata.cta861_3 = bo_data->metadata.cta861_3;
 
 	info.android_format = ghandle->format;
 	info.usage = ghandle->usage;
