@@ -40,9 +40,11 @@ cc_library_shared {
         "-Wcast-qual",
         "-Wcast-align",
         "-Wno-unused-parameter",
-        "-DANDROID_API_LEVEL=$(PLATFORM_SDK_VERSION)",
     ],
     product_variables: {
+        platform_sdk_version: {
+            cflags: ["-DANDROID_API_LEVEL=%d"],
+        },
         debuggable: {
             cflags: [
                 "-DANDROID_DEBUGGABLE",

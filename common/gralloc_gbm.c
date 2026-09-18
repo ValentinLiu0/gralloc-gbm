@@ -288,7 +288,11 @@ uint_t gralloc_gbm_calculate_gbm_flags(const int usage, const int gbm_format)
 	if (usage & GRALLOC_USAGE_PROTECTED)
 		flags |= GBM_BO_USE_PROTECTED;
 	if (usage & GRALLOC_USAGE_CURSOR)
+#if (ANDROID_API_LEVEL >= 35) /* Android 15 */
 		flags |= GBM_BO_USE_CURSOR;
+#else
+		;
+#endif
 	//if (usage & GRALLOC_USAGE_RENDERSCRIPT)
 	//	flags |= GBM_BO_USE_FRONT_RENDERING;
 
