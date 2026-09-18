@@ -476,23 +476,31 @@ AIMapper_Error GrallocGbmMapperV5::setStandardMetadata(buffer_handle_t _Nonnull 
 		break;
 	case StandardMetadataType::SMPTE2086:
 		assert(bo_data->smpte2086);
-		bo_data->metadata.smpte2086->primary_red_x = static_cast<const Smpte2086*>(metadata)->primaryRed.x;
-		bo_data->metadata.smpte2086->primary_red_y = static_cast<const Smpte2086*>(metadata)->primaryRed.y;
-		bo_data->metadata.smpte2086->primary_green_x = static_cast<const Smpte2086*>(metadata)->primaryGreen.x;
-		bo_data->metadata.smpte2086->primary_green_y = static_cast<const Smpte2086*>(metadata)->primaryGreen.y;
-		bo_data->metadata.smpte2086->primary_blue_x = static_cast<const Smpte2086*>(metadata)->primaryBlue.x;
-		bo_data->metadata.smpte2086->primary_blue_y = static_cast<const Smpte2086*>(metadata)->primaryBlue.y;
-		bo_data->metadata.smpte2086->white_point_x = static_cast<const Smpte2086*>(metadata)->whitePoint.x;
-		bo_data->metadata.smpte2086->white_point_y = static_cast<const Smpte2086*>(metadata)->whitePoint.y;
-		bo_data->metadata.smpte2086->max_luminance = static_cast<const Smpte2086*>(metadata)->maxLuminance;
-		bo_data->metadata.smpte2086->min_luminance = static_cast<const Smpte2086*>(metadata)->minLuminance;
-		LOG_V("set SMPTE2086 to address %p, received %s", bo_data->metadata.smpte2086, static_cast<const Smpte2086*>(metadata)->toString().c_str());
+		{
+			const Smpte2086 *smpte2086 = static_cast<const Smpte2086*>(metadata);
+			bo_data->metadata.smpte2086->primary_red_x = smpte2086->primaryRed.x;
+			bo_data->metadata.smpte2086->primary_red_y = smpte2086->primaryRed.y;
+			bo_data->metadata.smpte2086->primary_green_x = smpte2086->primaryGreen.x;
+			bo_data->metadata.smpte2086->primary_green_y = smpte2086->primaryGreen.y;
+			bo_data->metadata.smpte2086->primary_blue_x = smpte2086->primaryBlue.x;
+			bo_data->metadata.smpte2086->primary_blue_y = smpte2086->primaryBlue.y;
+			bo_data->metadata.smpte2086->white_point_x = smpte2086->whitePoint.x;
+			bo_data->metadata.smpte2086->white_point_y = smpte2086->whitePoint.y;
+			bo_data->metadata.smpte2086->max_luminance = smpte2086->maxLuminance;
+			bo_data->metadata.smpte2086->min_luminance = smpte2086->minLuminance;
+			LOG_V("set SMPTE2086 to address %p, received %s", bo_data->metadata.smpte2086, smpte2086->toString().c_str());
+		}
 		break;
 	case StandardMetadataType::CTA861_3:
 		assert(bo_data->cta861_3);
-		bo_data->metadata.cta861_3->max_content_light_level = static_cast<const Cta861_3*>(metadata)->maxContentLightLevel;
-		bo_data->metadata.cta861_3->max_frame_average_light_level = static_cast<const Cta861_3*>(metadata)->maxFrameAverageLightLevel;
-		LOG_V("set CTA861_3 to address %p, received %s", bo_data->metadata.cta861_3, static_cast<const Cta861_3*>(metadata)->toString().c_str());
+		{
+			const Cta861_3 *cta861_3 = static_cast<const Cta861_3*>(metadata);
+			bo_data->metadata.cta861_3->
+				max_content_light_level = cta861_3->maxContentLightLevel;
+			bo_data->metadata.cta861_3->
+				max_frame_average_light_level = cta861_3->maxFrameAverageLightLevel;
+			LOG_V("set CTA861_3 to address %p, received %s", bo_data->metadata.cta861_3, cta861_3->toString().c_str());
+		}
 		break;
 	case StandardMetadataType::SMPTE2094_40:
 	case StandardMetadataType::SMPTE2094_10:
