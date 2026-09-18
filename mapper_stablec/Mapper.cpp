@@ -378,6 +378,10 @@ int32_t grallocGbmQueryAndroidBufferMetadata(buffer_handle_t handle, F&& provide
 	if constexpr (metadataType == StandardMetadataType::STRIDE) {
 		return provide(static_cast<int32_t>(info.stride));
 	}
+	if constexpr (metadataType == StandardMetadataType::SMPTE2094_50) {
+		std::optional<Smpte2086> smpte;
+		return AIMAPPER_ERROR_UNSUPPORTED;
+	}
 
 	LOG_W("Unknown metadata type: %s", toString(metadataType).c_str());
 	return AIMAPPER_ERROR_UNSUPPORTED;
@@ -468,6 +472,7 @@ AIMapper_Error GrallocGbmMapperV5::setStandardMetadata(buffer_handle_t _Nonnull 
 	case StandardMetadataType::CTA861_3:
 	case StandardMetadataType::SMPTE2094_40:
 	case StandardMetadataType::SMPTE2094_10:
+	case StandardMetadataType::SMPTE2094_50:
 		LOG_W("known metadata type but not implemented (%s).", metadataTypeName.c_str());
 		break;
 	default:
