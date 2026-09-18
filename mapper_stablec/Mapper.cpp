@@ -385,8 +385,13 @@ int32_t grallocGbmQueryAndroidBufferMetadata(buffer_handle_t handle, F&& provide
 		return provide(static_cast<int32_t>(info.stride));
 	}
 	if constexpr (metadataType == StandardMetadataType::SMPTE2094_50) {
-		std::optional<Smpte2086> smpte;
-		return AIMAPPER_ERROR_UNSUPPORTED;
+		if (info.metadata.smpte2094_50_size > 0) {
+			std::vector<uint8_t> data(info.metadata.smpte2094_50, info.metadata.smpte2094_50 + info.metadata.smpte2094_50_size);
+			std::optional<std::vector<uint8_t>> smpte2094_50(data);
+			return provide(smpte2094_50);
+		}
+		std::optional<std::vector<uint8_t>> zero;
+		return provide(zero);
 	}
 
 	LOG_W("Unknown metadata type: %s", toString(metadataType).c_str());
@@ -502,9 +507,21 @@ AIMapper_Error GrallocGbmMapperV5::setStandardMetadata(buffer_handle_t _Nonnull 
 			LOG_V("set CTA861_3 to address %p, received %s", bo_data->metadata.cta861_3, cta861_3->toString().c_str());
 		}
 		break;
+	case StandardMetadataType::SMPTE2094_50:
+		assert(bo_data->metadata.smpte2094_50);
+		if (metadataSize > GRALLOC_GBM_SMPTE2094_50_MAX_SIZE)
+			LOG_E("Received payload is out ");
+		{
+			std::vector<uint8_t> data((const uint8_t *)metadata, (const uint8_t *)metadata + metadataSize);
+			std::optional<std::vector<uint8_t>> smpte2094_50(data);
+			std::copy(smpte2094_50->begin(), smpte2094_50->end(), bo_data->metadata.smpte2094_50);
+			bo_data->metadata.smpte2094_50_size = smpte2094_50->size();
+			LOG_V("set SMPTE2094_50 to address %p (size: %d)", bo_data->metadata.smpte2094_50,
+			      bo_data->metadata.smpte2094_50_size);
+		}
+		break;
 	case StandardMetadataType::SMPTE2094_40:
 	case StandardMetadataType::SMPTE2094_10:
-	case StandardMetadataType::SMPTE2094_50:
 		LOG_W("known metadata type but not implemented (%s).", metadataTypeName.c_str());
 		break;
 	default:
@@ -514,7 +531,7 @@ AIMapper_Error GrallocGbmMapperV5::setStandardMetadata(buffer_handle_t _Nonnull 
 	return AIMAPPER_ERROR_NONE;
 }
 
-static constexpr std::array<AIMapper_MetadataTypeDescription, 21> sSupportedMetadataTypes {
+static constexpr std::array<AIMapper_MetadataTypeDescription, 22> sSupportedMetadataTypes {
 	/* Read-only types */
 	newStandardMetadata(StandardMetadataType::BUFFER_ID, true, false),
 	newStandardMetadata(StandardMetadataType::NAME, false, false),
@@ -538,6 +555,7 @@ static constexpr std::array<AIMapper_MetadataTypeDescription, 21> sSupportedMeta
 	newStandardMetadata(StandardMetadataType::BLEND_MODE, true, true),
 	newStandardMetadata(StandardMetadataType::SMPTE2086, true, true),
 	newStandardMetadata(StandardMetadataType::CTA861_3, true, true),
+	newStandardMetadata(StandardMetadataType::SMPTE2094_50, true, true),
 };
 
 AIMapper_Error GrallocGbmMapperV5::listSupportedMetadataTypes(const AIMapper_MetadataTypeDescription* _Nullable* _Nonnull outDescriptionList,

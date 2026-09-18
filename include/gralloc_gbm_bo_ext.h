@@ -38,11 +38,14 @@ typedef struct gralloc_gbm_cta861_3 {
 	float max_frame_average_light_level;
 } gralloc_gbm_cta861_3_t, cta861_3_t;
 
+#define GRALLOC_GBM_SMPTE2094_50_MAX_SIZE (1024 * 10)
 struct android_metadata {
 	int32_t dataspace;
 	int32_t blend_mode;
 	smpte2086_t *smpte2086;
 	cta861_3_t *cta861_3;
+	int32_t smpte2094_50_size;
+	uint8_t *smpte2094_50;
 };
 
 typedef struct gralloc_gbm_bo_data {
