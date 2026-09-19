@@ -331,6 +331,14 @@ bool gralloc_gbm_is_allocator_desc_supported(const allocator_desc_t *desc)
 	if (!desc)
 		return false;
 
+	/**
+	 * Allocator/Mapper should check this and use DRM instead of GBM backend.'
+	 * The GBM backend only support 2D texture with width and height limitations.
+	 * This is the last line of defense.
+	 */
+	if (desc->format == HAL_PIXEL_FORMAT_BLOB)
+		return false;
+
 	uint32_t gbm_format = color_fmt_a2g(desc->format);
 	if (gbm_format <= 0)
 		return false;
