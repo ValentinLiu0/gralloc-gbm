@@ -12,8 +12,8 @@
 #include <hardware/gralloc.h>
 #include <uthash/uthash.h>
 
-#define GRALLOC_GBM_WIDTH_MAX 65535
-#define GRALLOC_GBM_HEIGHT_MAX 65535
+#define GRALLOC_GBM_WIDTH_MAX 16384
+#define GRALLOC_GBM_HEIGHT_MAX 16384
 /**
  * Supported macros:
  *
