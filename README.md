@@ -37,8 +37,16 @@ Like:
 | Mapper Stable-C (Mapper V5) | `mapper.gbm.so`                                   | `mapper_stablec/` | IMapper Stable-C implement      |
 
 ### Dependencies
+- libdrm (Provided by libdrm in AOSP, NOT by Mesa3d)
 - libgbm (Provided by Mesa3d alias `libgbm_mesa`)
 - uthash (`include/uthash/`)
+
+### External headers
+(Note: Not including the third-party projects' headers)
+| Project | Files                                                         | Note                                      |
+|---------|---------------------------------------------------------------|-------------------------------------------|
+| Mesa3D  | `include/drm-uapi/*`, `include/drm/android/gralloc_handle.h`, | NOT provided by libdrm in AOSP            |
+| libdrm  | `include/xf86drm.h`                                           | Provided by libdrm in AOSP, NOT by Mesa3d |
 
 ## License
 This project is licensed under the Apache License, Version 2.0.

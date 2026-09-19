@@ -29,6 +29,7 @@ cc_library_shared {
     ],
     srcs: [
         "common/gralloc_gbm.c",
+        "common/gralloc_drm_gem.c",
     ],
     c_std: "gnu23",
     cflags: [
