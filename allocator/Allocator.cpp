@@ -33,16 +33,16 @@ int GrallocGbmAllocatorV2::init(void)
 	return gralloc_gbm_init();
 }
 
-ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocGbmDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult)
+ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocAllocatorDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult)
 {
 	LOG_TRACE();
 	if (!outResult) {
-		LOG_E("generateGrallocGbmDesc failed: Invalid out pointer.");
+		LOG_E("generateGrallocAllocatorDesc failed: Invalid out pointer.");
 		return ToBinderStatus(AllocationError::NO_RESOURCES);
 	}
 
 	if (info.width == 0 || info.height == 0) {
-		LOG_E("generateGrallocGbmDesc failed: Invalid buffer descriptor: width or height is zero");
+		LOG_E("generateGrallocAllocatorDesc failed: Invalid buffer descriptor: width or height is zero");
 		return ToBinderStatus(AllocationError::BAD_DESCRIPTOR);
 	}
 
@@ -51,7 +51,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocGbmDesc(const BufferDes
 
 	// TODO: Add multiple layer support.
 	if (info.layerCount > 1) {
-		LOG_E("generateGrallocGbmDesc failed: Failed to convert descriptor. Unsupported layerCount: %d", info.layerCount);
+		LOG_E("generateGrallocAllocatorDesc failed: Failed to convert descriptor. Unsupported layerCount: %d", info.layerCount);
 		return ToBinderStatus(AllocationError::UNSUPPORTED);
 	}
 
@@ -66,13 +66,13 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocGbmDesc(const BufferDes
 	return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocGbmAllocate(allocator_desc_t& desc, int32_t count, 
+ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocAllocate(allocator_desc_t& desc, int32_t count, 
 							     allocator::AllocationResult* outResult)
 {
 	LOG_TRACE();
 	if (!is_gralloc_gbm_ready()) {
 		if(gralloc_gbm_init()) {
-			LOG_E("grallocGbmAllocate failed: Failed to initialize the gralloc_gbm driver");
+			LOG_E("grallocAllocate failed: Failed to initialize the gralloc_gbm driver");
 			return ToBinderStatus(AllocationError::NO_RESOURCES);
 		}
 	}
@@ -91,7 +91,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocGbmAllocate(allocator_desc_t& d
 		uint32_t gbm_stride = 0;
 		int ret = gralloc_gbm_android_buffer_new(&desc, &gbm_stride, &handle);
 		if (ret || !handle) {
-			LOG_E("grallocGbmAllocate failed: GBM operation failed, ret=%d", ret);
+			LOG_E("grallocAllocate failed: GBM operation failed, ret=%d", ret);
 			for (int32_t j = 0; j < i; j++) {
 				// Release all buffer and handle
 				if (!handles[j])
@@ -158,13 +158,13 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate2(const BufferDescriptorInfo& 
 {
 	LOG_TRACE();
 	allocator_desc_t grallocGbmDesc = {};
-	ndk::ScopedAStatus status = generateGrallocGbmDesc(descriptor, &grallocGbmDesc);
+	ndk::ScopedAStatus status = generateGrallocAllocatorDesc(descriptor, &grallocGbmDesc);
 	if (!status.isOk()) {
 		LOG_E("allocate2 failed: Failed to convert the request buffer desc to Gralloc GBM desc.\n");
 		return ToBinderStatus(AllocationError::UNSUPPORTED);
 	}
 
-	return grallocGbmAllocate(grallocGbmDesc, count, outResult);
+	return grallocAllocate(grallocGbmDesc, count, outResult);
 }
 
 ndk::ScopedAStatus GrallocGbmAllocatorV2::isSupported(const BufferDescriptorInfo& descriptor,
@@ -187,7 +187,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::isSupported(const BufferDescriptorInfo
 	}
 
 	allocator_desc_t grallocGbmDesc = {};
-	ndk::ScopedAStatus status = generateGrallocGbmDesc(descriptor, &grallocGbmDesc);
+	ndk::ScopedAStatus status = generateGrallocAllocatorDesc(descriptor, &grallocGbmDesc);
 	if (!status.isOk()) {
 		LOG_E("isSupported failed: Failed to convert the request buffer desc to Gralloc GBM desc.\n");
 		return ToBinderStatus(AllocationError::UNSUPPORTED);

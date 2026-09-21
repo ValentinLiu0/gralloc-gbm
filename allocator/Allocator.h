@@ -42,9 +42,9 @@ class GrallocGbmAllocatorV2 : public BnAllocator {
 	ndk::SpAIBinder createBinder() override;
 
 	private:
-	ndk::ScopedAStatus generateGrallocGbmDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult);
+	ndk::ScopedAStatus generateGrallocAllocatorDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult);
 
-	ndk::ScopedAStatus grallocGbmAllocate(allocator_desc_t& desc, int32_t count, allocator::AllocationResult* outResult);
+	ndk::ScopedAStatus grallocAllocate(allocator_desc_t& desc, int32_t count, allocator::AllocationResult* outResult);
 };
 
 } // namespace aidl::android::hardware::graphics::allocator::impl
