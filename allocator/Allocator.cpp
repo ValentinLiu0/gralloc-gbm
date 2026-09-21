@@ -30,6 +30,9 @@ inline ndk::ScopedAStatus ToBinderStatus(AllocationError error) {
 int GrallocGbmAllocatorV2::init(void)
 {
 	LOG_TRACE();
+	if (gralloc_drm_gem_init()) {
+		LOG_W("init: Gralloc DRM GEM backend initialization failed.");
+	}
 	return gralloc_gbm_init();
 }
 
@@ -77,9 +80,15 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocAllocate(allocator_desc_t& desc
 		}
 	}
 
+	bool use_gbm_backend = true;
+
 	if (!gralloc_gbm_is_allocator_desc_supported(&desc)) {
-		LOG_E("grallocAllocate failed: Unsupported allocator desc: %s", allocator_desc_to_string(&desc));
-		return ToBinderStatus(AllocationError::UNSUPPORTED);
+		if (!gralloc_drm_gem_is_allocator_desc_supported(&desc)) {
+			LOG_E("grallocAllocate failed: Unsupported allocator desc: %s", allocator_desc_to_string(&desc));
+			return ToBinderStatus(AllocationError::UNSUPPORTED);
+		}
+		LOG_D("Use DRM GEM backend to allocate buffer.");
+		use_gbm_backend = false;
 	}
 
 	std::vector<native_handle_t *> handles;
@@ -88,8 +97,12 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocAllocate(allocator_desc_t& desc
 	int32_t pixel_stride = 0;
 	for (int32_t i = 0; i < count; i++) {
 		native_handle_t *handle;
-		uint32_t gbm_stride = 0;
-		int ret = gralloc_gbm_android_buffer_new(&desc, &gbm_stride, &handle);
+		uint32_t stride = 0;
+		int ret = 0;
+		if (use_gbm_backend)
+			gralloc_gbm_android_buffer_new(&desc, &stride, &handle);
+		else
+		 	gralloc_drm_gem_bo_create(&desc, &stride, &handle);
 		if (ret || !handle) {
 			LOG_E("grallocAllocate failed: GBM operation failed, ret=%d", ret);
 			for (int32_t j = 0; j < i; j++) {
@@ -103,7 +116,10 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocAllocate(allocator_desc_t& desc
 			return ToBinderStatus(AllocationError::UNSUPPORTED);
 		}
 		handles[i] = handle;
-		pixel_stride = gralloc_gbm_caculate_android_pixel_stride(desc.format, gbm_stride);
+		if (use_gbm_backend)
+			pixel_stride = gralloc_gbm_caculate_android_pixel_stride(desc.format, stride);
+		else
+		 	pixel_stride = gralloc_drm_gem_caculate_android_pixel_stride(desc.format, stride);
 	}
 
 	outResult->buffers.resize(count);
