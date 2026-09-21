@@ -77,6 +77,11 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocGbmAllocate(allocator_desc_t& d
 		}
 	}
 
+	if (!gralloc_gbm_is_allocator_desc_supported(&desc)) {
+		LOG_E("grallocAllocate failed: Unsupported allocator desc: %s", allocator_desc_to_string(&desc));
+		return ToBinderStatus(AllocationError::UNSUPPORTED);
+	}
+
 	std::vector<native_handle_t *> handles;
 	handles.resize(count, nullptr);
     

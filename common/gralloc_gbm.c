@@ -394,11 +394,6 @@ int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *
 	if (!is_gralloc_gbm_ready())
 		return -ENODEV;
 
-	if (!gralloc_gbm_is_allocator_desc_supported(desc)) {
-		LOG_E("Unsupported allocator desc: %s", allocator_desc_to_string(desc));
-		return -EINVAL;
-	}
-
 	uint32_t gbm_format = color_fmt_a2g(desc->format);
 	if (gbm_format <= 0) {
 		LOG_E("Unsupported Android color format: %d", desc->format);
