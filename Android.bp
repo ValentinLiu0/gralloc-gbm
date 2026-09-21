@@ -25,6 +25,51 @@ cc_library_shared {
     ],
     srcs: [
         "common/gralloc_gbm.c",
+    ],
+    c_std: "gnu23",
+    cflags: [
+        "-D_GNU_SOURCE=1",
+        "-D_FILE_OFFSET_BITS=64",
+        "-Wall",
+        "-Wsign-compare",
+        "-Wpointer-arith",
+        "-Wcast-qual",
+        "-Wcast-align",
+        "-Wno-unused-parameter",
+	"-DGRALLOC_GBM_NO_CURSOR_RENDERING"
+    ],
+    product_variables: {
+        platform_sdk_version: {
+            cflags: ["-DANDROID_API_LEVEL=%d"],
+        },
+        debuggable: {
+            cflags: [
+                "-DANDROID_DEBUGGABLE",
+            ],
+        },
+    },
+    vendor: true,
+}
+
+cc_library_shared {
+    name: "libgralloc_drm_gem",
+    header_libs: [
+        "gralloc_gbm_headers",
+        "libhardware_headers",
+        "libnativebase_headers",
+        "libsystem_headers",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "libcutils",
+        "libdmabufheap",
+        "libdrm",
+        "libgbm_mesa",
+        "libgralloctypes",
+        "liblog",
+    ],
+    srcs: [
         "common/gralloc_drm_gem.c",
     ],
     c_std: "gnu23",
@@ -73,6 +118,7 @@ cc_library_shared {
         "libdmabufheap",
         "libdrm",
         "libgbm_mesa",
+        "libgralloc_drm_gem",
         "libgralloc_gbm",
         "libgralloctypes",
         "libhidlbase",
@@ -121,6 +167,7 @@ cc_binary {
         "libdmabufheap",
         "libdrm",
         "libgbm_mesa",
+        "libgralloc_drm_gem",
         "libgralloc_gbm",
         "libgralloctypes",
         "libhidlbase",
@@ -156,4 +203,93 @@ cc_binary {
             ],
         },
     },
+}
+
+cc_library_shared {
+    name: "drm_gem.panthor",
+    header_libs: [
+        "gralloc_gbm_headers",
+        "libhardware_headers",
+        "libnativebase_headers",
+        "libsystem_headers",
+    ],
+    shared_libs: [
+        "libbase",
+        "libdmabufheap",
+        "libdrm",
+        "libgralloc_gbm",
+        "libgralloctypes",
+        "liblog",
+    ],
+    srcs: [
+        "common/drm_drivers/panthor.c",
+    ],
+    c_std: "gnu23",
+    cflags: [
+        "-D_GNU_SOURCE=1",
+        "-D_FILE_OFFSET_BITS=64",
+	"-fPIC",
+        "-Wall",
+        "-Wsign-compare",
+        "-Wpointer-arith",
+        "-Wcast-qual",
+        "-Wcast-align",
+        "-Wno-unused-parameter",
+    ],
+    product_variables: {
+        platform_sdk_version: {
+            cflags: ["-DANDROID_API_LEVEL=%d"],
+        },
+        debuggable: {
+            cflags: [
+                "-DANDROID_DEBUGGABLE",
+            ],
+        },
+    },
+    vendor: true,
+}
+
+cc_binary {
+    name: "gralloc_drm_gem_test",
+    header_libs: [
+        "gralloc_gbm_headers",
+        "libhardware_headers",
+        "libnativebase_headers",
+        "libsystem_headers",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder_ndk",
+        "libcutils",
+        "libdmabufheap",
+        "libdrm",
+        "libgralloc_drm_gem",
+        "libgralloctypes",
+        "liblog",
+    ],
+    srcs: [
+        "tests/drm_gem/gralloc_drm_gem_test.c",
+    ],
+    c_std: "gnu23",
+    cflags: [
+        "-D_GNU_SOURCE=1",
+        "-D_FILE_OFFSET_BITS=64",
+        "-Wall",
+        "-Wsign-compare",
+        "-Wpointer-arith",
+        "-Wcast-qual",
+        "-Wcast-align",
+        "-Wno-unused-parameter",
+    ],
+    product_variables: {
+        platform_sdk_version: {
+            cflags: ["-DANDROID_API_LEVEL=%d"],
+        },
+        debuggable: {
+            cflags: [
+                "-DANDROID_DEBUGGABLE",
+            ],
+        },
+    },
+    vendor: true,
 }
