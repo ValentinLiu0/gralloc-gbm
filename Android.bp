@@ -23,10 +23,6 @@ cc_library_shared {
         "libgralloctypes",
         "liblog",
     ],
-    static_libs: [
-        "libarect",
-        "libaidlcommonsupport",
-    ],
     srcs: [
         "common/gralloc_gbm.c",
         "common/gralloc_drm_gem.c",
