@@ -18,6 +18,14 @@ static int dri_fd = 0;
 static const drm_gem_driver_ops_t *g_ops = nullptr;
 static void *drv_handle;
 
+bool is_gralloc_drm_gem_ready(void)
+{
+	if (dri_fd > 0 && !!g_ops)
+		return true;
+
+	return false;
+}
+
 int gralloc_drm_gem_init(void)
 {
 	LOG_TRACE();
@@ -108,6 +116,7 @@ inline uint32_t calculate_stride(const int android_format, const int32_t width)
 	switch (android_format) {
 	case HAL_PIXEL_FORMAT_BLOB:
 	bpp = 8 * get_bytes_per_pixel(android_format);
+	break;
 	default:
 	bpp = 0;
 	}

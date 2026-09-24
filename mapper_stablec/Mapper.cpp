@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <gralloc_drm_gem.h>
 #include <gralloc_gbm.h>
 #include <gralloc_gbm_format.h>
 
@@ -104,9 +105,14 @@ AIMapper_Error GrallocGbmMapperV5::importBuffer(const native_handle_t* _Nonnull 
 	}
 
 	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
+		if (gralloc_gbm_init()) {
 			LOG_E("importBuffer failed: Failed to initialize the gralloc_gbm driver");
 			return AIMAPPER_ERROR_NO_RESOURCES;
+		}
+	}
+	if (!is_gralloc_drm_gem_ready()) {
+		if (gralloc_drm_gem_init()) {
+			LOG_W("importBuffer: Gralloc DRM GEM backend initialization failed.");
 		}
 	}
 

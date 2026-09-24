@@ -11,6 +11,7 @@ extern "C" {
 
 /* Gralloc DRM GEM functions */
 
+bool is_gralloc_drm_gem_ready(void);
 int gralloc_drm_gem_init(void);
 bool gralloc_drm_gem_is_allocator_desc_supported(const allocator_desc_t *desc);
 int gralloc_drm_gem_bo_create(allocator_desc_t *desc, uint32_t *out_stride, native_handle_t **out_buffer_handle);
