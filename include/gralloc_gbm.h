@@ -132,7 +132,7 @@ typedef struct gralloc_gbm_android_buffer_info {
 } gralloc_gbm_android_buffer_info_t, android_buffer_info_t;
 
 /* Gralloc GBM Android platform functions */
-int32_t gralloc_gbm_caculate_android_pixel_stride(const int32_t android_format, const uint32_t gbm_stride /*pitch*/);
+int32_t gralloc_gbm_calculate_android_pixel_stride(const int32_t android_format, const uint32_t gbm_stride /*pitch*/);
 uint_t gralloc_gbm_calculate_gbm_flags(const int usage, const int gbm_format);
 bool gralloc_gbm_is_allocator_desc_supported(const allocator_desc_t *desc);
 int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *out_stride, native_handle_t **out_buffer_handle);

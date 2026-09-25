@@ -103,7 +103,7 @@ ndk::ScopedAStatus GrallocGenericAllocatorV2::grallocGbmAllocate(allocator_desc_
 			return ToBinderStatus(AllocationError::UNSUPPORTED);
 		}
 		handles[i] = handle;
-		pixel_stride = gralloc_gbm_caculate_android_pixel_stride(desc.format, gbm_stride);
+		pixel_stride = gralloc_gbm_calculate_android_pixel_stride(desc.format, gbm_stride);
 	}
 
 	outResult->buffers.resize(count);

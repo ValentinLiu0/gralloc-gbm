@@ -248,7 +248,7 @@ static void gralloc_gbm_bo_unmap(struct gbm_bo *bo) {
  * Defined at AllocationResult.aidl
  * Return the stride in pixels
  */
-int32_t gralloc_gbm_caculate_android_pixel_stride(const int32_t android_format, const uint32_t gbm_stride /*pitch*/)
+int32_t gralloc_gbm_calculate_android_pixel_stride(const int32_t android_format, const uint32_t gbm_stride /*pitch*/)
 {
 	LOG_TRACE();
 	uint32_t gbm_format = color_fmt_a2g(android_format);
@@ -695,7 +695,7 @@ int gralloc_gbm_android_buffer_query(const buffer_handle_t handle, android_buffe
 		info.is_protected = true;
 
 	info.size = gbm_bo_get_stride(bo) * info.height;
-	info.stride = gralloc_gbm_caculate_android_pixel_stride(ghandle->format, gbm_bo_get_stride(bo));
+	info.stride = gralloc_gbm_calculate_android_pixel_stride(ghandle->format, gbm_bo_get_stride(bo));
 
 	*out = info;
 
