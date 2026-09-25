@@ -1,4 +1,4 @@
-service vendor.graphics.allocator /vendor/bin/hw/android.hardware.graphics.allocator-service.gbm
+service vendor.graphics.allocator /vendor/bin/hw/android.hardware.graphics.allocator-service.generic
     class hal animation
     user system
     group graphics drmrpc

@@ -1,8 +1,13 @@
-# Gralloc GBM
+# Gralloc Generic
 
-Gralloc V5 implements for using GBM backends (Currently using libgbm from Mesa3d).
+Gralloc V5 implements (supported Android 14+) for managing system buffers by 
+using GBM backends (Currently using libgbm from Mesa3d) and Linux DMA-BUF.
 
-Tested working fine with Android Hardware Composer 3 (HWC3) DRM.
+Tested working fine with Android Hardware Composer 3 (HWC3) DRM instance on 
+RK3588 Platform on Android 17.
+
+This Gralloc implement manages graphics buffers by using GBM,
+manages blob (linear) buffers by using Linux DMA-BUF.
 
 ## Compile and Use
 1. Download the source.
@@ -10,31 +15,31 @@ Tested working fine with Android Hardware Composer 3 (HWC3) DRM.
 cd <path_to_aosp_root>
 mkdir -p vendor/valentinliu0/
 cd vendor/valentinliu0/
-git clone https://github.com/ValentinLiu0/gralloc-gbm.git
+git clone https://github.com/ValentinLiu0/gralloc-generic.git
 ```
 
 2. Add product packages.
 ```Makefile
-# Gralloc GBM
+# Gralloc Generic
 PRODUCT_PACKAGES += \
-	android.hardware.graphics.allocator-service.gbm \
-	mapper.gbm
+	android.hardware.graphics.allocator-service.generic \
+	mapper.generic
 ```
-Note: the file `/vendor/bin/hw/android.hardware.graphics.allocator-service.gbm` should be labeled with correct SELinux label to execute.
+Note: the file `/vendor/bin/hw/android.hardware.graphics.allocator-service.generic` should be labeled with correct SELinux label to execute.
 Like:
 ```sepolicy
-/vendor/bin/hw/android\.hardware\.graphics\.allocator-service\.gbm  u:object_r:vendor_services_exec:s0
+/vendor/bin/hw/android\.hardware\.graphics\.allocator-service\.generic  u:object_r:vendor_services_exec:s0
 ```
 
 3. Build AOSP and product image.
 
 ## Development
 ### Projects
-| Project                     | Main build artifacts                              | Path              | Usage                           |
-|-----------------------------|---------------------------------------------------|-------------------|---------------------------------|
-| gralloc_gbm                 | `libgralloc_gbm.so`                               | `common/`         | Library provided by gralloc_gbm |
-| Allocator V2                | `android.hardware.graphics.allocator-service.gbm` | `allocator/`      | Allocator V2 AIDL service       |
-| Mapper Stable-C (Mapper V5) | `mapper.gbm.so`                                   | `mapper_stablec/` | IMapper Stable-C implement      |
+| Project                     | Main build artifacts                                  | Path              | Usage                           |
+|-----------------------------|-------------------------------------------------------|-------------------|---------------------------------|
+| gralloc_gbm                 | `libgralloc_gbm.so`                                   | `common/`         | Library provided by gralloc_gbm |
+| Allocator V2                | `android.hardware.graphics.allocator-service.generic` | `allocator/`      | Allocator V2 AIDL service       |
+| Mapper Stable-C (Mapper V5) | `mapper.generic.so`                                   | `mapper_stablec/` | IMapper Stable-C implement      |
 
 ### Dependencies
 - libgbm (Provided by Mesa3d alias `libgbm_mesa`)

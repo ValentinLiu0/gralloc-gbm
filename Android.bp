@@ -1,5 +1,5 @@
 cc_library_headers {
-    name: "gralloc_gbm_headers",
+    name: "gralloc_generic_headers",
     host_supported: true,
     vendor_available: true,
     export_include_dirs: ["include"],
@@ -8,7 +8,7 @@ cc_library_headers {
 cc_library_shared {
     name: "libgralloc_gbm",
     header_libs: [
-        "gralloc_gbm_headers",
+        "gralloc_generic_headers",
         "libhardware_headers",
         "libnativebase_headers",
         "libsystem_headers",
@@ -56,11 +56,11 @@ cc_library_shared {
 }
 
 cc_library_shared {
-    name: "mapper.gbm",
+    name: "mapper.generic",
     relative_install_path: "hw",
-    vintf_fragments: ["vintf/mapper.gbm.xml"],
+    vintf_fragments: ["vintf/mapper.generic.xml"],
     header_libs: [
-        "gralloc_gbm_headers",
+        "gralloc_generic_headers",
         "libbase_headers",
         "libhardware_headers",
         "libimapper_stablec",
@@ -104,13 +104,13 @@ cc_library_shared {
 }
 
 cc_binary {
-    name: "android.hardware.graphics.allocator-service.gbm",
+    name: "android.hardware.graphics.allocator-service.generic",
     relative_install_path: "hw",
-    init_rc: ["allocator/android.hardware.graphics.allocator-service.gbm.rc"],
-    vintf_fragments: ["vintf/android.hardware.graphics.allocator-service.gbm.xml"],
+    init_rc: ["allocator/android.hardware.graphics.allocator-service.generic.rc"],
+    vintf_fragments: ["vintf/android.hardware.graphics.allocator-service.generic.xml"],
     vendor: true,
     header_libs: [
-        "gralloc_gbm_headers",
+        "gralloc_generic_headers",
         "libhardware_headers",
         "libimapper_stablec",
         "libnativebase_headers",

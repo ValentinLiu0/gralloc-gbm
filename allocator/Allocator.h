@@ -20,10 +20,10 @@ using aidl::android::hardware::graphics::common::BufferUsage;
 
 namespace aidl::android::hardware::graphics::allocator::impl {
 
-class GrallocGbmAllocatorV2 : public BnAllocator {
+class GrallocGenericAllocatorV2 : public BnAllocator {
 	public:
-	GrallocGbmAllocatorV2() = default;
-	~GrallocGbmAllocatorV2() = default;
+	GrallocGenericAllocatorV2() = default;
+	~GrallocGenericAllocatorV2() = default;
 
 	ndk::ScopedAStatus allocate(const std::vector<uint8_t>& descriptor, int32_t count,
 				    allocator::AllocationResult* outResult) override;

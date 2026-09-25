@@ -12,7 +12,7 @@
 
 #include "Allocator.h"
 
-#define LOG_TAG "GrallocGbmAllocatorV2"
+#define LOG_TAG "GrallocGenericAllocatorV2"
 #include <private/log.h>
 
 using aidl::android::hardware::common::NativeHandle;
@@ -27,13 +27,13 @@ inline ndk::ScopedAStatus ToBinderStatus(AllocationError error) {
 	return ndk::ScopedAStatus::fromServiceSpecificError(static_cast<int32_t>(error));
 }
 
-int GrallocGbmAllocatorV2::init(void)
+int GrallocGenericAllocatorV2::init(void)
 {
 	LOG_TRACE();
 	return gralloc_gbm_init();
 }
 
-ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocGbmDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult)
+ndk::ScopedAStatus GrallocGenericAllocatorV2::generateGrallocGbmDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult)
 {
 	LOG_TRACE();
 	if (!outResult) {
@@ -66,7 +66,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::generateGrallocGbmDesc(const BufferDes
 	return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocGbmAllocate(allocator_desc_t& desc, int32_t count, 
+ndk::ScopedAStatus GrallocGenericAllocatorV2::grallocGbmAllocate(allocator_desc_t& desc, int32_t count, 
 							     allocator::AllocationResult* outResult)
 {
 	LOG_TRACE();
@@ -122,7 +122,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::grallocGbmAllocate(allocator_desc_t& d
 	return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate(const std::vector<uint8_t>& encodedDescriptor, int32_t count,
+ndk::ScopedAStatus GrallocGenericAllocatorV2::allocate(const std::vector<uint8_t>& encodedDescriptor, int32_t count,
 						   allocator::AllocationResult* outResult)
 {
 	LOG_TRACE();
@@ -153,7 +153,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate(const std::vector<uint8_t>& e
 	return allocate2(info, count, outResult);
 }
 
-ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate2(const BufferDescriptorInfo& descriptor, int32_t count,
+ndk::ScopedAStatus GrallocGenericAllocatorV2::allocate2(const BufferDescriptorInfo& descriptor, int32_t count,
 						    allocator::AllocationResult* outResult)
 {
 	LOG_TRACE();
@@ -167,7 +167,7 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::allocate2(const BufferDescriptorInfo& 
 	return grallocGbmAllocate(grallocGbmDesc, count, outResult);
 }
 
-ndk::ScopedAStatus GrallocGbmAllocatorV2::isSupported(const BufferDescriptorInfo& descriptor,
+ndk::ScopedAStatus GrallocGenericAllocatorV2::isSupported(const BufferDescriptorInfo& descriptor,
 						      bool* outResult)
 {
 	LOG_TRACE();
@@ -197,14 +197,14 @@ ndk::ScopedAStatus GrallocGbmAllocatorV2::isSupported(const BufferDescriptorInfo
 	return ndk::ScopedAStatus::ok();
 }
 
-ndk::ScopedAStatus GrallocGbmAllocatorV2::getIMapperLibrarySuffix(std::string* outResult)
+ndk::ScopedAStatus GrallocGenericAllocatorV2::getIMapperLibrarySuffix(std::string* outResult)
 {
 	LOG_TRACE();
-	*outResult = "gbm";
+	*outResult = "generic";
 	return ndk::ScopedAStatus::ok();
 }
 
-::ndk::SpAIBinder GrallocGbmAllocatorV2::createBinder()
+::ndk::SpAIBinder GrallocGenericAllocatorV2::createBinder()
 {
 	auto binder = BnAllocator::createBinder();
 	AIBinder_setInheritRt(binder.get(), true);

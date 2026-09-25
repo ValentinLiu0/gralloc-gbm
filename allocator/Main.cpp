@@ -8,15 +8,15 @@
 #include <android/binder_manager.h>
 #include <android/binder_process.h>
 
-#define LOG_TAG "GrallocGbmAllocator"
+#define LOG_TAG "GrallocGenericAllocator"
 #include <cutils/log.h>
 
 #include "Allocator.h"
 
-using aidl::android::hardware::graphics::allocator::impl::GrallocGbmAllocatorV2;
+using aidl::android::hardware::graphics::allocator::impl::GrallocGenericAllocatorV2;
 
 int main(int /*argc*/, char** /*argv*/) {
-	ALOGI("GBM Mesa AIDL allocator starting up...");
+	ALOGI("Generic AIDL allocator starting up...");
 
 	// same as SF main thread
 	struct sched_param param = {0};
@@ -25,7 +25,7 @@ int main(int /*argc*/, char** /*argv*/) {
 		ALOGI("%s: failed to set priority: %s", __FUNCTION__, strerror(errno));
 	}
 
-	auto allocator = ndk::SharedRefBase::make<GrallocGbmAllocatorV2>();
+	auto allocator = ndk::SharedRefBase::make<GrallocGenericAllocatorV2>();
 	CHECK(allocator != nullptr);
 
 	if (allocator->init()) {
@@ -33,7 +33,7 @@ int main(int /*argc*/, char** /*argv*/) {
 		return EXIT_FAILURE;
 	}
 
-	const std::string instance = std::string() + GrallocGbmAllocatorV2::descriptor + "/default";
+	const std::string instance = std::string() + GrallocGenericAllocatorV2::descriptor + "/default";
 	binder_status_t status =
 		AServiceManager_addService(allocator->asBinder().get(), instance.c_str());
 	CHECK_EQ(status, STATUS_OK);

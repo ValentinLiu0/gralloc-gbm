@@ -7,7 +7,7 @@
 #include <gralloc_gbm.h>
 #include <gralloc_gbm_format.h>
 
-#define LOG_TAG "GrallocGbmMapperV5"
+#define LOG_TAG "GrallocGenericMapperV5"
 #include <private/log.h>
 
 #include <aidl/android/hardware/graphics/allocator/BufferDescriptorInfo.h>
@@ -42,10 +42,10 @@ inline bool is_native_handle_valid(const native_handle_t *handle)
 	return true;
 }
 
-class GrallocGbmMapperV5 final : public vendor::mapper::IMapperV5Impl {
+class GrallocGenericMapperV5 final : public vendor::mapper::IMapperV5Impl {
 	public:
-	explicit GrallocGbmMapperV5() = default;
-	~GrallocGbmMapperV5() = default;
+	explicit GrallocGenericMapperV5() = default;
+	~GrallocGenericMapperV5() = default;
 
 	AIMapper_Error importBuffer(const native_handle_t* _Nonnull handle,
 				buffer_handle_t _Nullable* _Nonnull outBufferHandle) override;
@@ -94,7 +94,7 @@ class GrallocGbmMapperV5 final : public vendor::mapper::IMapperV5Impl {
 					 uint64_t* _Nonnull outReservedSize) override;
 };
 
-AIMapper_Error GrallocGbmMapperV5::importBuffer(const native_handle_t* _Nonnull handle,
+AIMapper_Error GrallocGenericMapperV5::importBuffer(const native_handle_t* _Nonnull handle,
 						buffer_handle_t _Nullable* _Nonnull outBufferHandle)
 {
 	LOG_TRACE();
@@ -127,7 +127,7 @@ AIMapper_Error GrallocGbmMapperV5::importBuffer(const native_handle_t* _Nonnull 
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::freeBuffer(buffer_handle_t _Nonnull buffer)
+AIMapper_Error GrallocGenericMapperV5::freeBuffer(buffer_handle_t _Nonnull buffer)
 {
 	LOG_TRACE();
 	if (!buffer) {
@@ -150,7 +150,7 @@ AIMapper_Error GrallocGbmMapperV5::freeBuffer(buffer_handle_t _Nonnull buffer)
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::getTransportSize(buffer_handle_t _Nonnull buffer, uint32_t* _Nonnull outNumFds,
+AIMapper_Error GrallocGenericMapperV5::getTransportSize(buffer_handle_t _Nonnull buffer, uint32_t* _Nonnull outNumFds,
 						    uint32_t* _Nonnull outNumInts)
 {
 	LOG_TRACE();
@@ -171,7 +171,7 @@ AIMapper_Error GrallocGbmMapperV5::getTransportSize(buffer_handle_t _Nonnull buf
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::lock(buffer_handle_t _Nonnull buffer, uint64_t cpuUsage, ARect accessRegion,
+AIMapper_Error GrallocGenericMapperV5::lock(buffer_handle_t _Nonnull buffer, uint64_t cpuUsage, ARect accessRegion,
 					int acquireFence, void* _Nullable* _Nonnull outData)
 {
 	LOG_TRACE();
@@ -200,7 +200,7 @@ AIMapper_Error GrallocGbmMapperV5::lock(buffer_handle_t _Nonnull buffer, uint64_
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::unlock(buffer_handle_t _Nonnull buffer, int* _Nonnull releaseFence)
+AIMapper_Error GrallocGenericMapperV5::unlock(buffer_handle_t _Nonnull buffer, int* _Nonnull releaseFence)
 {
 	LOG_TRACE();
 	if (!buffer) {
@@ -223,14 +223,14 @@ AIMapper_Error GrallocGbmMapperV5::unlock(buffer_handle_t _Nonnull buffer, int* 
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::flushLockedBuffer(buffer_handle_t _Nonnull buffer)
+AIMapper_Error GrallocGenericMapperV5::flushLockedBuffer(buffer_handle_t _Nonnull buffer)
 {
 	LOG_TRACE();
 	LOG_D("flushLockedBuffer: no operations for GBM.");
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::rereadLockedBuffer(buffer_handle_t _Nonnull buffer)
+AIMapper_Error GrallocGenericMapperV5::rereadLockedBuffer(buffer_handle_t _Nonnull buffer)
 {
 	LOG_TRACE();
 	LOG_D("rereadLockedBuffer: no operations for GBM.");
@@ -249,7 +249,7 @@ constexpr AIMapper_MetadataTypeDescription newStandardMetadata(StandardMetadataT
 	};
 }
 
-int32_t GrallocGbmMapperV5::getMetadata(buffer_handle_t _Nonnull buffer, AIMapper_MetadataType metadataType,
+int32_t GrallocGenericMapperV5::getMetadata(buffer_handle_t _Nonnull buffer, AIMapper_MetadataType metadataType,
 					void* _Nonnull outData, size_t outDataSize)
 {
 	LOG_TRACE();
@@ -398,7 +398,7 @@ int32_t grallocGbmQueryAndroidBufferMetadata(buffer_handle_t handle, F&& provide
 	return AIMAPPER_ERROR_UNSUPPORTED;
 }
 
-int32_t GrallocGbmMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buffer, int64_t standardMetadataType,
+int32_t GrallocGenericMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buffer, int64_t standardMetadataType,
 						void* _Nonnull outData, size_t outDataSize)
 {
 	LOG_TRACE();
@@ -422,7 +422,7 @@ int32_t GrallocGbmMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buffer,
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::setMetadata(buffer_handle_t _Nonnull buffer, AIMapper_MetadataType metadataType,
+AIMapper_Error GrallocGenericMapperV5::setMetadata(buffer_handle_t _Nonnull buffer, AIMapper_MetadataType metadataType,
 					       const void* _Nonnull metadata, size_t metadataSize)
 {
 	LOG_TRACE();
@@ -438,7 +438,7 @@ AIMapper_Error GrallocGbmMapperV5::setMetadata(buffer_handle_t _Nonnull buffer, 
 	return AIMAPPER_ERROR_UNSUPPORTED;
 }
 
-AIMapper_Error GrallocGbmMapperV5::setStandardMetadata(buffer_handle_t _Nonnull buffer,
+AIMapper_Error GrallocGenericMapperV5::setStandardMetadata(buffer_handle_t _Nonnull buffer,
 						       int64_t standardMetadataType, const void* _Nonnull metadata,
 						       size_t metadataSize)
 {
@@ -558,7 +558,7 @@ static constexpr std::array<AIMapper_MetadataTypeDescription, 22> sSupportedMeta
 	newStandardMetadata(StandardMetadataType::SMPTE2094_50, true, true),
 };
 
-AIMapper_Error GrallocGbmMapperV5::listSupportedMetadataTypes(const AIMapper_MetadataTypeDescription* _Nullable* _Nonnull outDescriptionList,
+AIMapper_Error GrallocGenericMapperV5::listSupportedMetadataTypes(const AIMapper_MetadataTypeDescription* _Nullable* _Nonnull outDescriptionList,
 							      size_t* _Nonnull outNumberOfDescriptions)
 {
 	LOG_TRACE();
@@ -568,7 +568,7 @@ AIMapper_Error GrallocGbmMapperV5::listSupportedMetadataTypes(const AIMapper_Met
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::dumpBuffer(buffer_handle_t _Nonnull bufferHandle,
+AIMapper_Error GrallocGenericMapperV5::dumpBuffer(buffer_handle_t _Nonnull bufferHandle,
 					      AIMapper_DumpBufferCallback _Nonnull dumpBufferCallback,
 					      void* _Null_unspecified context)
 {
@@ -592,7 +592,7 @@ AIMapper_Error GrallocGbmMapperV5::dumpBuffer(buffer_handle_t _Nonnull bufferHan
 	return AIMAPPER_ERROR_NONE;
 }
 
-AIMapper_Error GrallocGbmMapperV5::dumpAllBuffers(AIMapper_BeginDumpBufferCallback _Nonnull beginDumpBufferCallback,
+AIMapper_Error GrallocGenericMapperV5::dumpAllBuffers(AIMapper_BeginDumpBufferCallback _Nonnull beginDumpBufferCallback,
 				  		  AIMapper_DumpBufferCallback _Nonnull dumpBufferCallback,
 				  		  void* _Null_unspecified context)
 {
@@ -614,7 +614,7 @@ AIMapper_Error GrallocGbmMapperV5::dumpAllBuffers(AIMapper_BeginDumpBufferCallba
 }
 
 // TODO: Add reserved region support.
-AIMapper_Error GrallocGbmMapperV5::getReservedRegion(buffer_handle_t _Nonnull buffer,
+AIMapper_Error GrallocGenericMapperV5::getReservedRegion(buffer_handle_t _Nonnull buffer,
 						     void* _Nullable* _Nonnull outReservedRegion,
 						     uint64_t* _Nonnull outReservedSize)
 {
@@ -643,6 +643,6 @@ extern "C" AIMapper_Error AIMapper_loadIMapper(AIMapper* _Nullable* _Nonnull out
 	LOG_TRACE();
 	assert(outImplementation);
 
-	static vendor::mapper::IMapperProvider<GrallocGbmMapperV5> provider;
+	static vendor::mapper::IMapperProvider<GrallocGenericMapperV5> provider;
 	return provider.load(outImplementation);
 }
