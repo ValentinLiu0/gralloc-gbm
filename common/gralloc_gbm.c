@@ -394,6 +394,8 @@ int gralloc_gbm_android_buffer_new(allocator_desc_t *desc, __nullable uint32_t *
 	if (!is_gralloc_gbm_ready())
 		return -ENODEV;
 
+	LOG_D("new buffer object allocating request: %s", allocator_desc_to_string(desc));
+
 	uint32_t gbm_format = color_fmt_a2g(desc->format);
 	if (gbm_format <= 0) {
 		LOG_E("Unsupported Android color format: %d", desc->format);
@@ -475,6 +477,8 @@ int gralloc_gbm_android_buffer_import(const buffer_handle_t handle)
 	LOG_TRACE();
 	if (!is_gralloc_gbm_ready())
 		return -ENODEV;
+
+	LOG_D("new buffer importing request: %p", handle);
 
 	struct gbm_bo *bo;
 	const struct gralloc_handle_t *ghandle = gralloc_handle(handle);
