@@ -7,7 +7,9 @@
 #ifndef GRALLOC_GBM_BO_EXT_H
 #define GRALLOC_GBM_BO_EXT_H
 
-#include <stdlib.h>
+#include <gralloc_generic.h>
+
+#define GRALLOC_GBM_SMPTE2094_50_MAX_SIZE (1024 * 10)
 
 #define GBM_BO_USE_NONE			0
 #define GBM_BO_USE_EXT_RESERVED1	(1 << 11)
@@ -17,36 +19,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// Smpte2086.h
-typedef struct gralloc_gbm_smpte2086 {
-	float primary_red_x;
-	float primary_red_y;
-	float primary_green_x;
-	float primary_green_y;
-	float primary_blue_x;
-	float primary_blue_y;
-	float white_point_x;
-	float white_point_y;
-	float max_luminance;
-	float min_luminance;
-} gralloc_gbm_smpte2086_t, smpte2086_t;
-
-// Cta861_3.h
-typedef struct gralloc_gbm_cta861_3 {
-	float max_content_light_level;
-	float max_frame_average_light_level;
-} gralloc_gbm_cta861_3_t, cta861_3_t;
-
-#define GRALLOC_GBM_SMPTE2094_50_MAX_SIZE (1024 * 10)
-struct android_metadata {
-	int32_t dataspace;
-	int32_t blend_mode;
-	smpte2086_t *smpte2086;
-	cta861_3_t *cta861_3;
-	int32_t smpte2094_50_size;
-	uint8_t *smpte2094_50;
-};
 
 typedef struct gralloc_gbm_bo_data {
 	void *map_data;

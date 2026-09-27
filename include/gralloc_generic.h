@@ -1,0 +1,84 @@
+#ifndef GRALLOC_GENERIC_H
+#define GRALLOC_GENERIC_H
+
+#include <stdlib.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// android::hardware::graphics::mapper::V4_0::IMapper::BufferDescriptorInfo
+typedef struct gralloc_generic_allocator_buffer_descriptor {
+	unsigned char *name;
+	int32_t width;
+	int32_t height;
+	int32_t layer_count;
+	/* enum android_pixel_format_t */
+	int32_t format;
+	int64_t usage;
+	int64_t reserved_size;
+	// std::vector<::aidl::android::hardware::graphics::common::ExtendableType> additionalOptions;
+} gralloc_generic_allocator_buffer_descriptor_t;
+/**
+ * This structure is used to pass the informations required to create
+ * a new buffer by a Allocator backend. This structure is shared between
+ * Allocator backends and the backend libraries.
+ */
+typedef gralloc_generic_allocator_buffer_descriptor_t allocator_desc_t;
+
+static inline const char *allocator_desc_to_string(const allocator_desc_t *desc)
+{
+	static char buf[256];
+
+	if (desc == NULL) {
+		return "(null)";
+	}
+
+	snprintf(buf, sizeof(buf),
+		 "name=%s, width=%d, height=%d, layer_count=%d, "
+		 "format=%d, usage=0x%llx, reserved_size=%lld",
+		 desc->name ? (const char *)desc->name : "(null)",
+		 desc->width,
+		 desc->height,
+		 desc->layer_count,
+		 desc->format,
+		 (unsigned long long)desc->usage,
+		 (long long)desc->reserved_size);
+
+	return buf;
+}
+
+// Smpte2086.h
+typedef struct gralloc_generic_smpte2086 {
+	float primary_red_x;
+	float primary_red_y;
+	float primary_green_x;
+	float primary_green_y;
+	float primary_blue_x;
+	float primary_blue_y;
+	float white_point_x;
+	float white_point_y;
+	float max_luminance;
+	float min_luminance;
+} gralloc_generic_smpte2086_t, smpte2086_t;
+
+// Cta861_3.h
+typedef struct gralloc_generic_cta861_3 {
+	float max_content_light_level;
+	float max_frame_average_light_level;
+} gralloc_generic_cta861_3_t, cta861_3_t;
+
+struct android_metadata {
+	int32_t dataspace;
+	int32_t blend_mode;
+	smpte2086_t *smpte2086;
+	cta861_3_t *cta861_3;
+	int32_t smpte2094_50_size;
+	uint8_t *smpte2094_50;
+};
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* GRALLOC_GENERIC_H */
