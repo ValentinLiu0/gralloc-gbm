@@ -89,7 +89,7 @@ typedef struct gralloc_gbm_android_buffer_info {
 	int32_t stride;
 	bool is_protected;
 
-	struct android_metadata metadata;
+	buffer_metadata_t metadata;
 } gralloc_gbm_android_buffer_info_t, android_buffer_info_t;
 
 /* Gralloc GBM Android platform functions */

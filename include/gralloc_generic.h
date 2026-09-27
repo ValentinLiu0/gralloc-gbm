@@ -68,14 +68,14 @@ typedef struct gralloc_generic_cta861_3 {
 	float max_frame_average_light_level;
 } gralloc_generic_cta861_3_t, cta861_3_t;
 
-struct android_metadata {
+typedef struct android_buffer_metadata {
 	int32_t dataspace;
 	int32_t blend_mode;
 	smpte2086_t *smpte2086;
 	cta861_3_t *cta861_3;
 	int32_t smpte2094_50_size;
 	uint8_t *smpte2094_50;
-};
+} buffer_metadata_t;
 
 #ifdef __cplusplus
 }

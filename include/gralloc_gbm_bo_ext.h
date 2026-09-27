@@ -25,8 +25,8 @@ typedef struct gralloc_gbm_bo_data {
 	int lock_count;
 	int locked_for;
 
-	/* Android Graphics Metadata Support */
-	struct android_metadata metadata;
+	/* Android Graphics Buffer Metadata Support */
+	buffer_metadata_t metadata;
 } gralloc_gbm_bo_data_t, gbm_bo_data_t;
 
 
