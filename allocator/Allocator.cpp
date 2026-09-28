@@ -8,6 +8,7 @@
 #include <android/binder_ibinder_platform.h>
 #include <gralloctypes/Gralloc4.h>
 
+#include "backend/AllocatorDmaBuf.hpp"
 #include "backend/AllocatorGrallocGbm.hpp"
 #include "Allocator.h"
 
@@ -69,6 +70,19 @@ int AllocatorBackendImpl::generateGrallocGenericDesc(const BufferDescriptorInfo&
 
 namespace aidl::android::hardware::graphics::allocator::impl {
 
+std::shared_ptr<AllocatorBackendImpl> GrallocGenericAllocatorV2::fetchBackendDmaBuf()
+{
+	static std::mutex mutex;
+	static std::weak_ptr<AllocatorBackendImpl> dmaBufBackend;
+	std::lock_guard<std::mutex> lock(mutex);
+	std::shared_ptr<AllocatorBackendImpl> backend = dmaBufBackend.lock();
+	if (backend == nullptr) {
+		backend = std::make_shared<AllocatorBackendDmaBuf>();
+		dmaBufBackend = backend;
+	}
+	return backend;
+}
+
 std::shared_ptr<AllocatorBackendImpl> GrallocGenericAllocatorV2::fetchBackendGrallocGbm()
 {
 	static std::mutex mutex;
@@ -86,6 +100,9 @@ std::shared_ptr<AllocatorBackendImpl> GrallocGenericAllocatorV2::selectBackendBy
 {
 	std::shared_ptr<AllocatorBackendImpl> backend;
 	switch (type) {
+	case AllocatorBackendType::ALLOCATOR_GRALLOC_DMABUF:
+		backend = fetchBackendDmaBuf();
+		break;
 	case AllocatorBackendType::ALLOCATOR_GRALLOC_GBM:
 	default:
 		backend = fetchBackendGrallocGbm();
@@ -105,6 +122,15 @@ int GrallocGenericAllocatorV2::selectBackend(const BufferDescriptorInfo& descrip
 	backend = selectBackendByType(AllocatorBackendType::ALLOCATOR_GRALLOC_GBM);
 	backend->isSupported(descriptor, &supported);
 	if (supported) {
+		LOG_D("Selected Gralloc GBM backend.");
+		mBackend = backend;
+		return 0;
+	}
+
+	backend = selectBackendByType(AllocatorBackendType::ALLOCATOR_GRALLOC_DMABUF);
+	backend->isSupported(descriptor, &supported);
+	if (supported) {
+		LOG_D("Selected DMA-BUF backend.");
 		mBackend = backend;
 		return 0;
 	}
@@ -115,6 +141,8 @@ int GrallocGenericAllocatorV2::selectBackend(const BufferDescriptorInfo& descrip
 int GrallocGenericAllocatorV2::init(void)
 {
 	LOG_TRACE();
+
+	selectBackendByType(AllocatorBackendType::ALLOCATOR_GRALLOC_DMABUF)->init();
 
 	return selectBackendByType(AllocatorBackendType::ALLOCATOR_GRALLOC_GBM)->init();
 }

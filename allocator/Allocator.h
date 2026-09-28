@@ -83,6 +83,8 @@ protected:
 private:
 	/// returns a shared-singleton Gralloc GBM backend
 	std::shared_ptr<AllocatorBackendImpl> fetchBackendGrallocGbm();
+	/// returns a shared-singleton DMA-BUF backend
+	std::shared_ptr<AllocatorBackendImpl> fetchBackendDmaBuf();
 
 	std::shared_ptr<AllocatorBackendImpl> mBackend;
 	std::shared_ptr<AllocatorBackendImpl> selectBackendByType(const AllocatorBackendType type);
