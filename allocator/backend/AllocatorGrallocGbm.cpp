@@ -86,6 +86,11 @@ ndk::ScopedAStatus AllocatorBackendGrallocGbm::allocate2(const BufferDescriptorI
 
 ndk::ScopedAStatus AllocatorBackendGrallocGbm::isSupported(const BufferDescriptorInfo& descriptor, bool* outResult)
 {
+	if (descriptor.format == PixelFormat::BLOB) {
+		*outResult = false;
+		return ndk::ScopedAStatus::ok();
+	}
+
 	allocator_desc_t grallocGbmDesc = {};
 	int status = generateGrallocGenericDesc(descriptor, &grallocGbmDesc);
 	if (status != 0) {
