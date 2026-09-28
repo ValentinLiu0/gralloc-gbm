@@ -4,16 +4,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <aidl/android/hardware/graphics/allocator/AllocationError.h>
-#include <aidlcommonsupport/NativeHandle.h>
 #include <android-base/logging.h>
 #include <android/binder_ibinder_platform.h>
 #include <gralloctypes/Gralloc4.h>
 
+#include "backend/AllocatorGrallocGbm.hpp"
 #include "Allocator.h"
 
 #define LOG_TAG "GrallocGenericAllocatorV2"
 #include <private/log.h>
+
+#define CHECK_BACKEND()	\
+	do {		\
+		if (mBackend == nullptr) {	\
+			LOG_E("%s failed: Invalid backend pointer", __func__);			\
+			return ToBinderStatus(AllocationError::NO_RESOURCES);		\
+		}	\
+		if (!mBackend->isReady()) {	\
+			if (mBackend->init()) {	\
+				LOG_E("%s failed: Backend initialization failed", __func__);	\
+				return ToBinderStatus(AllocationError::NO_RESOURCES);	\
+			}	\
+		}	\
+	} while (0)
 
 using aidl::android::hardware::common::NativeHandle;
 using aidl::android::hardware::graphics::common::ExtendableType;
@@ -21,29 +34,17 @@ using BufferDescriptorInfoV4 = android::hardware::graphics::mapper::V4_0::IMappe
 
 static const std::string STANDARD_METADATA_DATASPACE = "android.hardware.graphics.common.Dataspace";
 
-namespace aidl::android::hardware::graphics::allocator::impl {
-
-inline ndk::ScopedAStatus ToBinderStatus(AllocationError error) {
-	return ndk::ScopedAStatus::fromServiceSpecificError(static_cast<int32_t>(error));
-}
-
-int GrallocGenericAllocatorV2::init(void)
-{
-	LOG_TRACE();
-	return gralloc_gbm_init();
-}
-
-ndk::ScopedAStatus GrallocGenericAllocatorV2::generateGrallocGbmDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult)
+int AllocatorBackendImpl::generateGrallocGenericDesc(const BufferDescriptorInfo& info, allocator_desc_t* outResult)
 {
 	LOG_TRACE();
 	if (!outResult) {
-		LOG_E("generateGrallocGbmDesc failed: Invalid out pointer.");
-		return ToBinderStatus(AllocationError::NO_RESOURCES);
+		LOG_E("generateGrallocGenericDesc failed: Invalid out pointer.");
+		return -EINVAL;
 	}
 
 	if (info.width == 0 || info.height == 0) {
-		LOG_E("generateGrallocGbmDesc failed: Invalid buffer descriptor: width or height is zero");
-		return ToBinderStatus(AllocationError::BAD_DESCRIPTOR);
+		LOG_E("generateGrallocGenericDesc failed: Invalid buffer descriptor: width or height is zero");
+		return -EINVAL;
 	}
 
 	outResult->width = static_cast<uint32_t>(info.width);
@@ -51,8 +52,8 @@ ndk::ScopedAStatus GrallocGenericAllocatorV2::generateGrallocGbmDesc(const Buffe
 
 	// TODO: Add multiple layer support.
 	if (info.layerCount > 1) {
-		LOG_E("generateGrallocGbmDesc failed: Failed to convert descriptor. Unsupported layerCount: %d", info.layerCount);
-		return ToBinderStatus(AllocationError::UNSUPPORTED);
+		LOG_E("generateGrallocGenericDesc failed: Failed to convert descriptor. Unsupported layerCount: %d", info.layerCount);
+		return -EINVAL;
 	}
 
 	outResult->format = static_cast<uint32_t>(info.format);
@@ -60,78 +61,68 @@ ndk::ScopedAStatus GrallocGenericAllocatorV2::generateGrallocGbmDesc(const Buffe
 	outResult->reserved_size = static_cast<uint32_t>(info.reservedSize);
 	outResult->layer_count = static_cast<uint32_t>(info.layerCount);
 
-	outResult->name = (unsigned char *) calloc(info.name.max_size(), sizeof(unsigned char));
+	outResult->name = (unsigned char *) calloc((info.name.size() + 1), sizeof(unsigned char));
 	memcpy(outResult->name, info.name.data(), info.name.size());
 
-	return ndk::ScopedAStatus::ok();
+	return 0;
 }
 
-ndk::ScopedAStatus GrallocGenericAllocatorV2::grallocGbmAllocate(allocator_desc_t& desc, int32_t count, 
-							     allocator::AllocationResult* outResult)
+namespace aidl::android::hardware::graphics::allocator::impl {
+
+std::shared_ptr<AllocatorBackendImpl> GrallocGenericAllocatorV2::fetchBackendGrallocGbm()
+{
+	static std::mutex mutex;
+	static std::weak_ptr<AllocatorBackendImpl> gbmBackend;
+	std::lock_guard<std::mutex> lock(mutex);
+	std::shared_ptr<AllocatorBackendImpl> backend = gbmBackend.lock();
+	if (backend == nullptr) {
+		backend = std::make_shared<AllocatorBackendGrallocGbm>();
+		gbmBackend = backend;
+	}
+	return backend;
+}
+
+std::shared_ptr<AllocatorBackendImpl> GrallocGenericAllocatorV2::selectBackendByType(const AllocatorBackendType type)
+{
+	std::shared_ptr<AllocatorBackendImpl> backend;
+	switch (type) {
+	case AllocatorBackendType::ALLOCATOR_GRALLOC_GBM:
+	default:
+		backend = fetchBackendGrallocGbm();
+	}
+	assert((backend != nullptr));
+	return backend;
+}
+
+int GrallocGenericAllocatorV2::selectBackend(const BufferDescriptorInfo& descriptor)
 {
 	LOG_TRACE();
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("grallocGbmAllocate failed: Failed to initialize the gralloc_gbm driver");
-			return ToBinderStatus(AllocationError::NO_RESOURCES);
-		}
+
+	assert(descriptor);
+	std::shared_ptr<AllocatorBackendImpl> backend;
+	bool supported = false;
+
+	backend = selectBackendByType(AllocatorBackendType::ALLOCATOR_GRALLOC_GBM);
+	backend->isSupported(descriptor, &supported);
+	if (supported) {
+		mBackend = backend;
+		return 0;
 	}
 
-	if (!gralloc_gbm_is_allocator_desc_supported(&desc)) {
-		LOG_E("grallocAllocate failed: Unsupported allocator desc: %s", allocator_desc_to_string(&desc));
-		return ToBinderStatus(AllocationError::UNSUPPORTED);
-	}
+	return -EINVAL;
+}
 
-	std::vector<native_handle_t *> handles;
-	handles.resize(count, nullptr);
-    
-	int32_t pixel_stride = 0;
-	for (int32_t i = 0; i < count; i++) {
-		native_handle_t *handle;
-		uint32_t gbm_stride = 0;
-		int ret = gralloc_gbm_android_buffer_new(&desc, &gbm_stride, &handle);
-		if (ret || !handle) {
-			LOG_E("grallocGbmAllocate failed: GBM operation failed, ret=%d", ret);
-			for (int32_t j = 0; j < i; j++) {
-				// Release all buffer and handle
-				if (!handles[j])
-					continue;
-				gralloc_gbm_android_buffer_free(handles[j]);
-				native_handle_close(handles[j]);
-				native_handle_delete(handles[j]);
-			}
-			return ToBinderStatus(AllocationError::UNSUPPORTED);
-		}
-		handles[i] = handle;
-		pixel_stride = gralloc_gbm_calculate_android_pixel_stride(desc.format, gbm_stride);
-	}
+int GrallocGenericAllocatorV2::init(void)
+{
+	LOG_TRACE();
 
-	outResult->buffers.resize(count);
-	for (int32_t i = 0; i < count; i++) {
-		if (!handles[i])
-			continue;
-		auto handle = handles[i];
-		outResult->buffers[i] = ::android::dupToAidl(handle);
-		// Release buffer and handle
-		gralloc_gbm_android_buffer_free(handle);
-		native_handle_close(handle);
-		native_handle_delete(handle);
-	}
-	outResult->stride = pixel_stride;
-
-	return ndk::ScopedAStatus::ok();
+	return selectBackendByType(AllocatorBackendType::ALLOCATOR_GRALLOC_GBM)->init();
 }
 
 ndk::ScopedAStatus GrallocGenericAllocatorV2::allocate(const std::vector<uint8_t>& encodedDescriptor, int32_t count,
-						   allocator::AllocationResult* outResult)
+						       allocator::AllocationResult* outResult)
 {
 	LOG_TRACE();
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("allocate failed: Failed to initialize the gralloc_gbm driver");
-			return ToBinderStatus(AllocationError::NO_RESOURCES);
-		}
-	}
 
 	BufferDescriptorInfoV4 mapperV4Descriptor;
 	int ret = ::android::gralloc4::decodeBufferDescriptorInfo(encodedDescriptor, &mapperV4Descriptor);
@@ -154,29 +145,20 @@ ndk::ScopedAStatus GrallocGenericAllocatorV2::allocate(const std::vector<uint8_t
 }
 
 ndk::ScopedAStatus GrallocGenericAllocatorV2::allocate2(const BufferDescriptorInfo& descriptor, int32_t count,
-						    allocator::AllocationResult* outResult)
+							allocator::AllocationResult* outResult)
 {
 	LOG_TRACE();
-	allocator_desc_t grallocGbmDesc = {};
-	ndk::ScopedAStatus status = generateGrallocGbmDesc(descriptor, &grallocGbmDesc);
-	if (!status.isOk()) {
-		LOG_E("allocate2 failed: Failed to convert the request buffer desc to Gralloc GBM desc.\n");
-		return ToBinderStatus(AllocationError::UNSUPPORTED);
-	}
 
-	return grallocGbmAllocate(grallocGbmDesc, count, outResult);
+	selectBackend(descriptor);
+	CHECK_BACKEND();
+
+	return mBackend->allocate2(descriptor, count, outResult);
 }
 
 ndk::ScopedAStatus GrallocGenericAllocatorV2::isSupported(const BufferDescriptorInfo& descriptor,
-						      bool* outResult)
+							  bool* outResult)
 {
 	LOG_TRACE();
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("isSupported failed: Failed to initialize the gralloc_gbm driver");
-			return ToBinderStatus(AllocationError::NO_RESOURCES);;
-		}
-	}
 
 	/* Deny all non-standard metadata options */
 	for (const auto& option : descriptor.additionalOptions) {
@@ -186,15 +168,10 @@ ndk::ScopedAStatus GrallocGenericAllocatorV2::isSupported(const BufferDescriptor
 		}
 	}
 
-	allocator_desc_t grallocGbmDesc = {};
-	ndk::ScopedAStatus status = generateGrallocGbmDesc(descriptor, &grallocGbmDesc);
-	if (!status.isOk()) {
-		LOG_E("isSupported failed: Failed to convert the request buffer desc to Gralloc GBM desc.\n");
-		return ToBinderStatus(AllocationError::UNSUPPORTED);
-	}
-	
-	*outResult = gralloc_gbm_is_allocator_desc_supported(&grallocGbmDesc);
-	return ndk::ScopedAStatus::ok();
+	selectBackend(descriptor);
+	CHECK_BACKEND();
+
+	return mBackend->isSupported(descriptor, outResult);
 }
 
 ndk::ScopedAStatus GrallocGenericAllocatorV2::getIMapperLibrarySuffix(std::string* outResult)

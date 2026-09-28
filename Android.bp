@@ -137,6 +137,7 @@ cc_binary {
         "libaidlcommonsupport",
     ],
     srcs: [
+        "allocator/backend/AllocatorGrallocGbm.cpp",
         "allocator/Allocator.cpp",
         "allocator/Main.cpp",
     ],
