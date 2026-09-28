@@ -196,7 +196,7 @@ gbm_bo_data_t *gralloc_gbm_bo_user_data_init(struct gbm_bo *bo)
 		bo_data = calloc(1, sizeof(gbm_bo_data_t));
 		bo_data->metadata.smpte2086 = calloc(1, sizeof(smpte2086_t));
 		bo_data->metadata.cta861_3 = calloc(1, sizeof(cta861_3_t));
-		bo_data->metadata.smpte2094_50 = calloc(GRALLOC_GBM_SMPTE2094_50_MAX_SIZE, sizeof(uint8_t));
+		bo_data->metadata.smpte2094_50 = calloc(GRALLOC_GENERIC_SMPTE2094_50_MAX_SIZE, sizeof(uint8_t));
 		bo_data->metadata.smpte2094_50_size = 0;
 		gbm_bo_set_user_data(bo, bo_data, gralloc_gbm_bo_data_destroy);
 	}

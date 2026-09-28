@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 
+#define GRALLOC_GENERIC_SMPTE2094_50_MAX_SIZE (1024 * 10)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

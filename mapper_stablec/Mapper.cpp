@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <gralloc_gbm.h>
-#include <gralloc_gbm_format.h>
-
 #define LOG_TAG "GrallocGenericMapperV5"
 #include <private/log.h>
 
@@ -15,16 +12,33 @@
 #include <aidl/android/hardware/graphics/common/PixelFormat.h>
 #include <aidl/android/hardware/graphics/common/StandardMetadataType.h>
 #include <android-base/unique_fd.h>
+#include <android/gralloc_handle.h>
 #include <android/hardware/graphics/mapper/IMapper.h>
 #include <android/hardware/graphics/mapper/utils/IMapperMetadataTypes.h>
 #include <android/hardware/graphics/mapper/utils/IMapperProvider.h>
 #include <cutils/native_handle.h>
 
-#include "MapperPlaneLayouts.hpp"
+#include "backend/MapperGrallocGbm.hpp"
+#include "MapperBackendImpl.hpp"
+
+#define CHECK_BACKEND()	\
+	do {		\
+		if (mBackend == nullptr) {	\
+			LOG_E("%s failed: Invalid backend pointer", __func__);			\
+			return AIMAPPER_ERROR_NO_RESOURCES;		\
+		}	\
+		if (!mBackend->isReady()) {	\
+			if (mBackend->init()) {	\
+				LOG_E("%s failed: Backend initialization failed", __func__);	\
+				return AIMAPPER_ERROR_NO_RESOURCES;	\
+			}	\
+		}	\
+	} while (0)
 
 using namespace ::android::hardware::graphics::mapper;
 using ::aidl::android::hardware::graphics::allocator::BufferDescriptorInfo;
 using ::android::base::unique_fd;
+using ::gralloc_generic::MapperBackendImpl;
 
 constexpr const char* STANDARD_METADATA_NAME =
         "android.hardware.graphics.common.StandardMetadataType";
@@ -43,7 +57,7 @@ inline bool is_native_handle_valid(const native_handle_t *handle)
 }
 
 class GrallocGenericMapperV5 final : public vendor::mapper::IMapperV5Impl {
-	public:
+public:
 	explicit GrallocGenericMapperV5() = default;
 	~GrallocGenericMapperV5() = default;
 
@@ -92,23 +106,65 @@ class GrallocGenericMapperV5 final : public vendor::mapper::IMapperV5Impl {
 	AIMapper_Error getReservedRegion(buffer_handle_t _Nonnull buffer,
 					 void* _Nullable* _Nonnull outReservedRegion,
 					 uint64_t* _Nonnull outReservedSize) override;
+private:
+	/// returns a shared-singleton Gralloc GBM backend
+	std::shared_ptr<MapperBackendImpl> fetchBackendGrallocGbm();
+
+	std::shared_ptr<MapperBackendImpl> mBackend;
+	std::shared_ptr<MapperBackendImpl> selectBackendByType(const MapperBackendType type);
+	int selectBackend(buffer_handle_t _Nonnull buffer);
 };
+
+std::shared_ptr<MapperBackendImpl> GrallocGenericMapperV5::fetchBackendGrallocGbm()
+{
+	static std::mutex mutex;
+	static std::weak_ptr<MapperBackendImpl> gbmBackend;
+	std::lock_guard<std::mutex> lock(mutex);
+	std::shared_ptr<MapperBackendImpl> backend = gbmBackend.lock();
+	if (backend == nullptr) {
+		backend = std::make_shared<MapperBackendGrallocGbm>();
+		gbmBackend = backend;
+	}
+	return backend;
+}
+
+std::shared_ptr<MapperBackendImpl> GrallocGenericMapperV5::selectBackendByType(const MapperBackendType type)
+{
+	std::shared_ptr<MapperBackendImpl> backend;
+	switch (type) {
+	case MapperBackendType::MAPPER_GRALLOC_GBM:
+	default:
+		backend = fetchBackendGrallocGbm();
+	}
+	assert((backend != nullptr));
+	return backend;
+}
+
+int GrallocGenericMapperV5::selectBackend(buffer_handle_t _Nonnull buffer)
+{
+	LOG_TRACE();
+
+	std::shared_ptr<MapperBackendImpl> backend;
+	gralloc_handle_t *handle = gralloc_handle(buffer);
+	assert(handle);
+
+	backend = selectBackendByType(MapperBackendType::MAPPER_GRALLOC_GBM);
+
+	mBackend = backend;
+	return 0;
+}
 
 AIMapper_Error GrallocGenericMapperV5::importBuffer(const native_handle_t* _Nonnull handle,
 						buffer_handle_t _Nullable* _Nonnull outBufferHandle)
 {
-	LOG_TRACE();
+	LOG_TRACE();    
 	if (!::is_native_handle_valid(handle)) {
 		LOG_E("importBuffer failed: invalid handle (%p).", handle);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("importBuffer failed: Failed to initialize the gralloc_gbm driver");
-			return AIMAPPER_ERROR_NO_RESOURCES;
-		}
-	}
+	selectBackend(handle);
+	CHECK_BACKEND();
 
 	native_handle_t *importedBufferHandle = native_handle_clone(handle);
 	if (!importedBufferHandle) {
@@ -116,10 +172,10 @@ AIMapper_Error GrallocGenericMapperV5::importBuffer(const native_handle_t* _Nonn
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
-	if (gralloc_gbm_android_buffer_import((buffer_handle_t) importedBufferHandle)) {
+	if (mBackend->importBuffer((buffer_handle_t) importedBufferHandle) != 0) {
 		native_handle_close(importedBufferHandle);
 		native_handle_delete(importedBufferHandle);
-		LOG_E("importBuffer failed: GBM operation failed.");
+		LOG_E("importBuffer failed: Backend operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -135,15 +191,11 @@ AIMapper_Error GrallocGenericMapperV5::freeBuffer(buffer_handle_t _Nonnull buffe
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("freeBuffer failed: Failed to initialize the gralloc_gbm driver");
-			return AIMAPPER_ERROR_NO_RESOURCES;
-		}
-	}
+	selectBackend(buffer);
+	CHECK_BACKEND();
 
-	if (gralloc_gbm_android_buffer_free(buffer)) {
-		LOG_E("freeBuffer failed: GBM operation failed.");
+	if (mBackend->freeBuffer(buffer) != 0) {
+		LOG_E("freeBuffer failed: Backend operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -155,15 +207,8 @@ AIMapper_Error GrallocGenericMapperV5::getTransportSize(buffer_handle_t _Nonnull
 {
 	LOG_TRACE();
 	if (!buffer) {
-		LOG_E("lock failed: invalid buffer (%p).", buffer);
+		LOG_E("getTransportSize failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
-	}
-
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("getTransportSize failed: Failed to initialize the gralloc_gbm driver");
-			return AIMAPPER_ERROR_NO_RESOURCES;
-		}
 	}
 
 	*outNumFds = buffer->numFds;
@@ -185,15 +230,11 @@ AIMapper_Error GrallocGenericMapperV5::lock(buffer_handle_t _Nonnull buffer, uin
 		return AIMAPPER_ERROR_BAD_VALUE;
 	}
 
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("lock failed: Failed to initialize the gralloc_gbm driver");
-			return AIMAPPER_ERROR_NO_RESOURCES;
-		}
-	}
+	selectBackend(buffer);
+	CHECK_BACKEND();
 
-	if (gralloc_gbm_android_buffer_lock(buffer, cpuUsage, accessRegion.top, accessRegion.bottom, accessRegion.left, accessRegion.right, outData)) {
-		LOG_E("lock failed: GBM operation failed.");
+	if (mBackend->lock(buffer, cpuUsage, accessRegion, acquireFence, outData) != 0) {
+		LOG_E("lock failed: Backend operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -208,15 +249,11 @@ AIMapper_Error GrallocGenericMapperV5::unlock(buffer_handle_t _Nonnull buffer, i
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
 
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("unlock failed: Failed to initialize the gralloc_gbm driver");
-			return AIMAPPER_ERROR_NO_RESOURCES;
-		}
-	}
-	
-	if (gralloc_gbm_android_buffer_unlock(buffer)) {
-		LOG_E("unlock failed: GBM operation failed.");
+	selectBackend(buffer);
+	CHECK_BACKEND();
+
+	if (mBackend->unlock(buffer, releaseFence) != 0) {
+		LOG_E("unlock failed: Backend operation failed.");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -226,14 +263,28 @@ AIMapper_Error GrallocGenericMapperV5::unlock(buffer_handle_t _Nonnull buffer, i
 AIMapper_Error GrallocGenericMapperV5::flushLockedBuffer(buffer_handle_t _Nonnull buffer)
 {
 	LOG_TRACE();
-	LOG_D("flushLockedBuffer: no operations for GBM.");
+
+	selectBackend(buffer);
+	CHECK_BACKEND();
+
+	if (mBackend->flushLockedBuffer(buffer) != 0) {
+		LOG_E("flushLockedBuffer failed: Backend operation failed.");
+		return AIMAPPER_ERROR_NO_RESOURCES;
+	}
 	return AIMAPPER_ERROR_NONE;
 }
 
 AIMapper_Error GrallocGenericMapperV5::rereadLockedBuffer(buffer_handle_t _Nonnull buffer)
 {
 	LOG_TRACE();
-	LOG_D("rereadLockedBuffer: no operations for GBM.");
+
+	selectBackend(buffer);
+	CHECK_BACKEND();
+
+	if (mBackend->rereadLockedBuffer(buffer) != 0) {
+		LOG_E("rereadLockedBuffer failed: Backend operation failed.");
+		return AIMAPPER_ERROR_NO_RESOURCES;
+	}
 	return AIMAPPER_ERROR_NONE;
 }
 
@@ -265,141 +316,8 @@ int32_t GrallocGenericMapperV5::getMetadata(buffer_handle_t _Nonnull buffer, AIM
 	return AIMAPPER_ERROR_UNSUPPORTED;
 }
 
-inline int getPlaneLayouts(uint32_t gbm_format, std::vector<PlaneLayout>* outPlaneLayouts);
-
-template <typename F, StandardMetadataType metadataType>
-int32_t grallocGbmQueryAndroidBufferMetadata(buffer_handle_t handle, F&& provide,
-					     StandardMetadata<metadataType>)
-{
-	android_buffer_info_t info;
-	if (gralloc_gbm_android_buffer_query(handle, &info)) {
-		LOG_E("grallocGbmQueryAndroidBufferMetadata failed: GBM operation failed.");
-		return AIMAPPER_ERROR_NO_RESOURCES;
-	}
-
-	if constexpr (metadataType == StandardMetadataType::BUFFER_ID) {
-		return provide(reinterpret_cast<uint64_t>(info.buffer_id));
-	}
-	if constexpr (metadataType == StandardMetadataType::NAME) {
-		if (info.name)
-			return provide(reinterpret_cast<const char *>(info.name));
-
-		return provide("<unknown name>");
-	}
-	if constexpr (metadataType == StandardMetadataType::WIDTH) {
-		return provide(static_cast<int32_t>(info.width));
-	}
-	if constexpr (metadataType == StandardMetadataType::HEIGHT) {
-		return provide(static_cast<int32_t>(info.height));
-	}
-	if constexpr (metadataType == StandardMetadataType::LAYER_COUNT) {
-		return provide(static_cast<int32_t>(info.layer_count));
-	}
-	if constexpr (metadataType == StandardMetadataType::PIXEL_FORMAT_REQUESTED) {
-		return provide(static_cast<PixelFormat>(info.android_format));
-	}
-	if constexpr (metadataType == StandardMetadataType::PIXEL_FORMAT_FOURCC) {
-		return provide(static_cast<uint32_t>(info.gbm_format));
-	}
-	if constexpr (metadataType == StandardMetadataType::PIXEL_FORMAT_MODIFIER) {
-		return provide(info.modifier);
-	}
-	if constexpr (metadataType == StandardMetadataType::USAGE) {
-		return provide(static_cast<BufferUsage>(info.usage));
-	}
-	if constexpr (metadataType == StandardMetadataType::ALLOCATION_SIZE) {
-		return provide(static_cast<uint64_t>(info.size));
-	}
-	if constexpr (metadataType == StandardMetadataType::PROTECTED_CONTENT) {
-		return provide(static_cast<bool>(info.is_protected));
-	}
-	if constexpr (metadataType == StandardMetadataType::COMPRESSION) {
-		return provide(android::gralloc4::Compression_None);
-	}
-	if constexpr (metadataType == StandardMetadataType::INTERLACED) {
-		return provide(android::gralloc4::Interlaced_None);
-	}
-	if constexpr (metadataType == StandardMetadataType::CHROMA_SITING) {
-		return provide(android::gralloc4::ChromaSiting_None);
-	}
-	if constexpr (metadataType == StandardMetadataType::PLANE_LAYOUTS) {
-		int32_t num = info.plane_count;
-		std::vector<PlaneLayout> planeLayouts;
-		if (getPlaneLayouts(info.gbm_format, &planeLayouts)) {
-			return AIMAPPER_ERROR_UNSUPPORTED;
-		}
-
-		for (size_t plane = 0; plane < planeLayouts.size(); plane++) {
-			PlaneLayout& planeLayout = planeLayouts[plane];
-			planeLayout.offsetInBytes = 0;
-			planeLayout.strideInBytes = info.stride * color_bytes_per_pixel(info.gbm_format);
-			// FIXME: vertical_subsampling=1 for now
-			planeLayout.totalSizeInBytes = planeLayout.strideInBytes * DIV_ROUND_UP(info.height, 1);
-			planeLayout.widthInSamples = info.width / planeLayout.horizontalSubsampling;
-			planeLayout.heightInSamples = info.height / planeLayout.verticalSubsampling;
-		}
-        	return provide(planeLayouts);
-	}
-	if constexpr (metadataType == StandardMetadataType::CROP) {
-		const uint32_t numPlanes = 1; // FIXME: We only support 1 currently
-		std::vector<aidl::android::hardware::graphics::common::Rect> crops;
-		for (uint32_t plane = 0; plane < numPlanes; plane++) {
-			aidl::android::hardware::graphics::common::Rect crop;
-			crop.left = 0;
-			crop.top = 0;
-			crop.right = info.width;
-			crop.bottom = info.height;
-			crops.push_back(crop);
-		}
-		return provide(crops);
-	}
-	if constexpr (metadataType == StandardMetadataType::DATASPACE) {
-		return provide(static_cast<Dataspace>(info.metadata.dataspace));
-	}
-	if constexpr (metadataType == StandardMetadataType::BLEND_MODE) {
-		return provide(static_cast<BlendMode>(info.metadata.dataspace));
-	}
-	if constexpr (metadataType == StandardMetadataType::SMPTE2086) {
-		std::optional<Smpte2086> smpte2086;
-		smpte2086->primaryRed = XyColor(info.metadata.smpte2086->primary_red_x, info.metadata.smpte2086->primary_red_y);
-		smpte2086->primaryGreen = XyColor(info.metadata.smpte2086->primary_green_x, info.metadata.smpte2086->primary_green_y);
-		smpte2086->primaryBlue = XyColor(info.metadata.smpte2086->primary_blue_x, info.metadata.smpte2086->primary_blue_y);
-		smpte2086->whitePoint = XyColor(info.metadata.smpte2086->white_point_x, info.metadata.smpte2086->white_point_y);
-		smpte2086->maxLuminance = info.metadata.smpte2086->max_luminance;
-		smpte2086->minLuminance = info.metadata.smpte2086->min_luminance;
-		return provide(smpte2086);
-	}
-	if constexpr (metadataType == StandardMetadataType::CTA861_3) {
-		std::optional<Cta861_3> cta861_3;
-		cta861_3->maxContentLightLevel = info.metadata.cta861_3->max_content_light_level;
-		cta861_3->maxFrameAverageLightLevel = info.metadata.cta861_3->max_frame_average_light_level;
-		return provide(cta861_3);
-	}
-	if constexpr (metadataType == StandardMetadataType::SMPTE2094_40) {
-		return AIMAPPER_ERROR_UNSUPPORTED;
-	}
-	if constexpr (metadataType == StandardMetadataType::SMPTE2094_10) {
-		return AIMAPPER_ERROR_UNSUPPORTED;
-	}
-	if constexpr (metadataType == StandardMetadataType::STRIDE) {
-		return provide(static_cast<int32_t>(info.stride));
-	}
-	if constexpr (metadataType == StandardMetadataType::SMPTE2094_50) {
-		if (info.metadata.smpte2094_50_size > 0) {
-			std::vector<uint8_t> data(info.metadata.smpte2094_50, info.metadata.smpte2094_50 + info.metadata.smpte2094_50_size);
-			std::optional<std::vector<uint8_t>> smpte2094_50(data);
-			return provide(smpte2094_50);
-		}
-		std::optional<std::vector<uint8_t>> zero;
-		return provide(zero);
-	}
-
-	LOG_W("Unknown metadata type: %s", toString(metadataType).c_str());
-	return AIMAPPER_ERROR_UNSUPPORTED;
-}
-
 int32_t GrallocGenericMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buffer, int64_t standardMetadataType,
-						void* _Nonnull outData, size_t outDataSize)
+						    void* _Nonnull outData, size_t outDataSize)
 {
 	LOG_TRACE();
 	if (!buffer) {
@@ -412,14 +330,16 @@ int32_t GrallocGenericMapperV5::getStandardMetadata(buffer_handle_t _Nonnull buf
 
 	LOG_V("get standard metadata %s", metadataTypeName.c_str());
 
-	auto provider = [&]<StandardMetadataType T>(auto&& provide) -> int32_t {
-		return grallocGbmQueryAndroidBufferMetadata(buffer, provide, StandardMetadata<T>{});
-	};
-    
-	return provideStandardMetadata(static_cast<StandardMetadataType>(standardMetadataType), 
-				       outData, outDataSize, provider);
+	selectBackend(buffer);
+	CHECK_BACKEND();
 
-	return AIMAPPER_ERROR_NONE;
+	int32_t result = mBackend->getStandardMetadata(buffer, standardMetadataType, outData, outDataSize);
+	if (result < 0) {
+		LOG_E("getStandardMetadata failed: Backend operation failed.");
+		return AIMAPPER_ERROR_NO_RESOURCES;
+	}
+
+	return result;
 }
 
 AIMapper_Error GrallocGenericMapperV5::setMetadata(buffer_handle_t _Nonnull buffer, AIMapper_MetadataType metadataType,
@@ -447,14 +367,19 @@ AIMapper_Error GrallocGenericMapperV5::setStandardMetadata(buffer_handle_t _Nonn
 		LOG_E("setStandardMetadata failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
+
+	selectBackend(buffer);
+	CHECK_BACKEND();
+
 	// Convert the int64_t to StandardMetadataType enum and get readable name
 	StandardMetadataType metadataTypeEnum = static_cast<StandardMetadataType>(standardMetadataType);
 	std::string metadataTypeName = toString(metadataTypeEnum);
 
 	LOG_V("set standard metadata %s (size: %zu)", metadataTypeName.c_str(), metadataSize);
-	gbm_bo_data_t *bo_data = gralloc_gbm_android_buffer_get_extdata(buffer);
-	if (!bo_data) {
-		LOG_E("setStandardMetadata failed: Unable to find the extend data of buffer!");
+
+	buffer_metadata_t *data = (buffer_metadata_t *) calloc(1, sizeof(buffer_metadata_t));
+	if (!data) {
+		LOG_E("setStandardMetadata failed: no memory");
 		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
@@ -472,60 +397,70 @@ AIMapper_Error GrallocGenericMapperV5::setStandardMetadata(buffer_handle_t _Nonn
 		LOG_E("setStandardMetadata failed: Read-only metadata type (%s).", metadataTypeName.c_str());
 		return AIMAPPER_ERROR_BAD_VALUE;
 	case StandardMetadataType::DATASPACE:
-		bo_data->metadata.dataspace = static_cast<int32_t>(*(Dataspace *)metadata);
-		LOG_V("set DATASPACE to %d, received %d (%s)", bo_data->metadata.dataspace, *(Dataspace *)metadata, toString(*(Dataspace *)metadata).c_str());
+		data->dataspace = static_cast<int32_t>(*(Dataspace *)metadata);
+		LOG_V("set DATASPACE to %d, received %d (%s)", data->dataspace, *(Dataspace *)metadata, toString(*(Dataspace *)metadata).c_str());
 		break;
 	case StandardMetadataType::BLEND_MODE:
-		bo_data->metadata.blend_mode = static_cast<int32_t>(*(BlendMode *)metadata);
-		LOG_V("set BLEND_MODE to %d, received %d (%s)", bo_data->metadata.blend_mode, *(BlendMode *)metadata, toString(*(BlendMode *)metadata).c_str());
+		data->blend_mode = static_cast<int32_t>(*(BlendMode *)metadata);
+		LOG_V("set BLEND_MODE to %d, received %d (%s)", data->blend_mode, *(BlendMode *)metadata, toString(*(BlendMode *)metadata).c_str());
 		break;
 	case StandardMetadataType::SMPTE2086:
-		assert(bo_data->smpte2086);
 		{
+			data->smpte2086 = (smpte2086_t *) calloc(1, sizeof(smpte2086_t));
+			assert((data->smpte2086 != nullptr));
 			const Smpte2086 *smpte2086 = static_cast<const Smpte2086*>(metadata);
-			bo_data->metadata.smpte2086->primary_red_x = smpte2086->primaryRed.x;
-			bo_data->metadata.smpte2086->primary_red_y = smpte2086->primaryRed.y;
-			bo_data->metadata.smpte2086->primary_green_x = smpte2086->primaryGreen.x;
-			bo_data->metadata.smpte2086->primary_green_y = smpte2086->primaryGreen.y;
-			bo_data->metadata.smpte2086->primary_blue_x = smpte2086->primaryBlue.x;
-			bo_data->metadata.smpte2086->primary_blue_y = smpte2086->primaryBlue.y;
-			bo_data->metadata.smpte2086->white_point_x = smpte2086->whitePoint.x;
-			bo_data->metadata.smpte2086->white_point_y = smpte2086->whitePoint.y;
-			bo_data->metadata.smpte2086->max_luminance = smpte2086->maxLuminance;
-			bo_data->metadata.smpte2086->min_luminance = smpte2086->minLuminance;
-			LOG_V("set SMPTE2086 to address %p, received %s", bo_data->metadata.smpte2086, smpte2086->toString().c_str());
+			data->smpte2086->primary_red_x = smpte2086->primaryRed.x;
+			data->smpte2086->primary_red_y = smpte2086->primaryRed.y;
+			data->smpte2086->primary_green_x = smpte2086->primaryGreen.x;
+			data->smpte2086->primary_green_y = smpte2086->primaryGreen.y;
+			data->smpte2086->primary_blue_x = smpte2086->primaryBlue.x;
+			data->smpte2086->primary_blue_y = smpte2086->primaryBlue.y;
+			data->smpte2086->white_point_x = smpte2086->whitePoint.x;
+			data->smpte2086->white_point_y = smpte2086->whitePoint.y;
+			data->smpte2086->max_luminance = smpte2086->maxLuminance;
+			data->smpte2086->min_luminance = smpte2086->minLuminance;
+			LOG_V("set SMPTE2086 to address %p, received %s", data->smpte2086, smpte2086->toString().c_str());
 		}
 		break;
 	case StandardMetadataType::CTA861_3:
-		assert(bo_data->cta861_3);
 		{
+			data->cta861_3 = (cta861_3_t *) calloc(1, sizeof(cta861_3_t));
+			assert((data->cta861_3 != nullptr));
 			const Cta861_3 *cta861_3 = static_cast<const Cta861_3*>(metadata);
-			bo_data->metadata.cta861_3->
+			data->cta861_3->
 				max_content_light_level = cta861_3->maxContentLightLevel;
-			bo_data->metadata.cta861_3->
+			data->cta861_3->
 				max_frame_average_light_level = cta861_3->maxFrameAverageLightLevel;
-			LOG_V("set CTA861_3 to address %p, received %s", bo_data->metadata.cta861_3, cta861_3->toString().c_str());
+			LOG_V("set CTA861_3 to address %p, received %s", data->cta861_3, cta861_3->toString().c_str());
 		}
 		break;
 	case StandardMetadataType::SMPTE2094_50:
-		assert(bo_data->metadata.smpte2094_50);
-		if (metadataSize > GRALLOC_GBM_SMPTE2094_50_MAX_SIZE)
-			LOG_E("Received payload is out ");
+		if (metadataSize > GRALLOC_GENERIC_SMPTE2094_50_MAX_SIZE) {
+			LOG_E("Received payload is out of size limitation");
+			return AIMAPPER_ERROR_BAD_VALUE;
+		}
 		{
-			std::vector<uint8_t> data((const uint8_t *)metadata, (const uint8_t *)metadata + metadataSize);
-			std::optional<std::vector<uint8_t>> smpte2094_50(data);
-			std::copy(smpte2094_50->begin(), smpte2094_50->end(), bo_data->metadata.smpte2094_50);
-			bo_data->metadata.smpte2094_50_size = smpte2094_50->size();
-			LOG_V("set SMPTE2094_50 to address %p (size: %d)", bo_data->metadata.smpte2094_50,
-			      bo_data->metadata.smpte2094_50_size);
+			data->smpte2094_50 = (uint8_t *) calloc(metadataSize, sizeof(uint8_t));
+			assert((data->smpte2094_50 != nullptr));
+			std::vector<uint8_t> rawdata((const uint8_t *)metadata, (const uint8_t *)metadata + metadataSize);
+			std::optional<std::vector<uint8_t>> smpte2094_50(rawdata);
+			std::copy(smpte2094_50->begin(), smpte2094_50->end(), data->smpte2094_50);
+			data->smpte2094_50_size = smpte2094_50->size();
+			LOG_V("set SMPTE2094_50 to address %p (size: %d)", data->smpte2094_50,
+			      data->smpte2094_50_size);
 		}
 		break;
 	case StandardMetadataType::SMPTE2094_40:
 	case StandardMetadataType::SMPTE2094_10:
-		LOG_W("known metadata type but not implemented (%s).", metadataTypeName.c_str());
+		LOG_W("known but not implemented metadata type(%s).", metadataTypeName.c_str());
 		break;
 	default:
 		LOG_D("unsupported metadata type (%s).", metadataTypeName.c_str());
+	}
+
+	if (mBackend->setStandardMetadata(buffer, standardMetadataType, data) != 0) {
+		LOG_E("setStandardMetadata failed: Backend operation failed.");
+		return AIMAPPER_ERROR_NO_RESOURCES;
 	}
 
 	return AIMAPPER_ERROR_NONE;
@@ -577,14 +512,7 @@ AIMapper_Error GrallocGenericMapperV5::dumpBuffer(buffer_handle_t _Nonnull buffe
 		LOG_E("dumpBuffer failed: invalid buffer (%p).", bufferHandle);
 		return AIMAPPER_ERROR_BAD_BUFFER;
 	}
-	
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("dumpBuffer failed: Failed to initialize the gralloc_gbm driver");
-			return AIMAPPER_ERROR_UNSUPPORTED;
-		}
-	}
-	
+
 	auto callback = [&](AIMapper_MetadataType type, const std::vector<uint8_t>& buffer) {
 		dumpBufferCallback(context, type, buffer.data(), buffer.size());
 	};
@@ -597,13 +525,6 @@ AIMapper_Error GrallocGenericMapperV5::dumpAllBuffers(AIMapper_BeginDumpBufferCa
 				  		  void* _Null_unspecified context)
 {
 	LOG_TRACE();
-	
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("dumpAllBuffers failed: Failed to initialize the gralloc_gbm driver");
-			return AIMAPPER_ERROR_UNSUPPORTED;
-		}
-	}
 
 	auto callback = [&](AIMapper_MetadataType type, const std::vector<uint8_t>& buffer) {
 		//beginDumpBufferCallback(context);
@@ -622,13 +543,6 @@ AIMapper_Error GrallocGenericMapperV5::getReservedRegion(buffer_handle_t _Nonnul
 	if (!buffer) {
 		LOG_E("getReservedRegion failed: invalid buffer (%p).", buffer);
 		return AIMAPPER_ERROR_BAD_BUFFER;
-	}
-	
-	if (!is_gralloc_gbm_ready()) {
-		if(gralloc_gbm_init()) {
-			LOG_E("getReservedRegion failed: Failed to initialize the gralloc_gbm driver");
-			return AIMAPPER_ERROR_UNSUPPORTED;
-		}
 	}
 
 	*outReservedRegion = nullptr;

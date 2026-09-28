@@ -9,8 +9,6 @@
 
 #include <gralloc_generic.h>
 
-#define GRALLOC_GBM_SMPTE2094_50_MAX_SIZE (1024 * 10)
-
 #define GBM_BO_USE_NONE			0
 #define GBM_BO_USE_EXT_RESERVED1	(1 << 11)
 #define GBM_BO_USE_EXT_RESERVED2	(1 << 12)

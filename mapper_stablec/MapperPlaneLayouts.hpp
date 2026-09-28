@@ -20,7 +20,7 @@ using namespace ::aidl::android::hardware::graphics::common;
  * All formats in color_format_map[] should be supported.
  * The additional formats in color_bpp_map[] also be allowed.
  */
-const std::unordered_map<uint32_t, std::vector<PlaneLayout>>& GetPlaneLayoutsMap()
+inline const std::unordered_map<uint32_t, std::vector<PlaneLayout>>& GetPlaneLayoutsMap()
 {
 	static const auto* kPlaneLayoutsMap = new std::unordered_map<uint32_t, std::vector<PlaneLayout>>({
 		{
