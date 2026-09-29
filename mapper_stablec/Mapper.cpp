@@ -18,6 +18,7 @@
 #include <android/hardware/graphics/mapper/utils/IMapperProvider.h>
 #include <cutils/native_handle.h>
 
+#include "backend/MapperDmaBuf.hpp"
 #include "backend/MapperGrallocGbm.hpp"
 #include "MapperBackendImpl.hpp"
 
@@ -109,11 +110,25 @@ public:
 private:
 	/// returns a shared-singleton Gralloc GBM backend
 	std::shared_ptr<MapperBackendImpl> fetchBackendGrallocGbm();
+	std::shared_ptr<MapperBackendImpl> fetchBackendDmaBuf();
 
 	std::shared_ptr<MapperBackendImpl> mBackend;
 	std::shared_ptr<MapperBackendImpl> selectBackendByType(const MapperBackendType type);
 	int selectBackend(buffer_handle_t _Nonnull buffer);
 };
+
+std::shared_ptr<MapperBackendImpl> GrallocGenericMapperV5::fetchBackendDmaBuf()
+{
+	static std::mutex mutex;
+	static std::weak_ptr<MapperBackendImpl> dmaBufBackend;
+	std::lock_guard<std::mutex> lock(mutex);
+	std::shared_ptr<MapperBackendImpl> backend = dmaBufBackend.lock();
+	if (backend == nullptr) {
+		backend = std::make_shared<MapperBackendDmaBuf>();
+		dmaBufBackend = backend;
+	}
+	return backend;
+}
 
 std::shared_ptr<MapperBackendImpl> GrallocGenericMapperV5::fetchBackendGrallocGbm()
 {
@@ -132,6 +147,9 @@ std::shared_ptr<MapperBackendImpl> GrallocGenericMapperV5::selectBackendByType(c
 {
 	std::shared_ptr<MapperBackendImpl> backend;
 	switch (type) {
+	case MapperBackendType::MAPPER_GRALLOC_DMABUF:
+		backend = fetchBackendDmaBuf();
+		break;
 	case MapperBackendType::MAPPER_GRALLOC_GBM:
 	default:
 		backend = fetchBackendGrallocGbm();
@@ -148,7 +166,13 @@ int GrallocGenericMapperV5::selectBackend(buffer_handle_t _Nonnull buffer)
 	gralloc_handle_t *handle = gralloc_handle(buffer);
 	assert(handle);
 
-	backend = selectBackendByType(MapperBackendType::MAPPER_GRALLOC_GBM);
+	if (handle->format == HAL_PIXEL_FORMAT_BLOB && handle->height == 1)  {
+		LOG_D("Selected DMA-BUF backend.");
+		backend = selectBackendByType(MapperBackendType::MAPPER_GRALLOC_DMABUF);
+	} else {
+		LOG_D("Selected Gralloc GBM backend.");
+		backend = selectBackendByType(MapperBackendType::MAPPER_GRALLOC_GBM);
+	}
 
 	mBackend = backend;
 	return 0;

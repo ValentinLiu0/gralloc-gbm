@@ -89,6 +89,7 @@ cc_library_shared {
         "libaidlcommonsupport",
     ],
     srcs: [
+        "mapper_stablec/backend/MapperDmaBuf.cpp",
         "mapper_stablec/backend/MapperGrallocGbm.cpp",
         "mapper_stablec/Mapper.cpp",
     ],
