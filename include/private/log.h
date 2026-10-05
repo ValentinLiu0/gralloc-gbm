@@ -7,6 +7,8 @@
 #ifndef _PRIVATE_LOG_H
 #define _PRIVATE_LOG_H
 
+#define NO_TRACE 1
+
 #if !defined(NO_DEBUG) && defined(ANDROID_DEBUGGABLE)
 //#warning Enabled verbose output.
 #define LOG_NDEBUG 0
@@ -19,14 +21,18 @@
 
 #include <android/log.h>
 
+#ifndef NO_TRACE
 #define LOG_TRACE() __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, "%s:%d func %s()", __FILE_NAME__, __LINE__, __FUNCTION__)
+#else
+#define LOG_TRACE()
+#endif /* NO_TRACE */
 
-#define LOG_V(...) __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__)
-#define LOG_D(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
-#define LOG_I(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOG_W(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
-#define LOG_E(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
-#define LOG_F(...) __android_log_print(ANDROID_LOG_FATAL, LOG_TAG, __VA_ARGS__)
+#define LOG_V(fmt, ...) __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, "[V] %s: " fmt, __func__, ##__VA_ARGS__)
+#define LOG_D(fmt, ...) __android_log_print(ANDROID_LOG_DEBUG,   LOG_TAG, "[D] %s: " fmt, __func__, ##__VA_ARGS__)
+#define LOG_I(fmt, ...) __android_log_print(ANDROID_LOG_INFO,    LOG_TAG, "[I] %s: " fmt, __func__, ##__VA_ARGS__)
+#define LOG_W(fmt, ...) __android_log_print(ANDROID_LOG_WARN,    LOG_TAG, "[W] %s: " fmt, __func__, ##__VA_ARGS__)
+#define LOG_E(fmt, ...) __android_log_print(ANDROID_LOG_ERROR,   LOG_TAG, "[E] %s: " fmt, __func__, ##__VA_ARGS__)
+#define LOG_F(fmt, ...) __android_log_print(ANDROID_LOG_FATAL,   LOG_TAG, "[F] %s: " fmt, __func__, ##__VA_ARGS__)
 
 #define LOG_ASSERT(cond, ...) __android_log_assert(cond, LOG_TAG, __VA_ARGS__)
 

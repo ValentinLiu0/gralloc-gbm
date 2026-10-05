@@ -25,12 +25,12 @@
 #define CHECK_BACKEND()	\
 	do {		\
 		if (mBackend == nullptr) {	\
-			LOG_E("%s failed: Invalid backend pointer", __func__);			\
+			LOG_E("Invalid backend pointer");			\
 			return AIMAPPER_ERROR_NO_RESOURCES;		\
 		}	\
 		if (!mBackend->isReady()) {	\
 			if (mBackend->init()) {	\
-				LOG_E("%s failed: Backend initialization failed", __func__);	\
+				LOG_E("Backend initialization failed");	\
 				return AIMAPPER_ERROR_NO_RESOURCES;	\
 			}	\
 		}	\

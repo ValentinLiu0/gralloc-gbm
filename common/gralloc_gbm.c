@@ -192,7 +192,7 @@ gbm_bo_data_t *gralloc_gbm_bo_user_data_init(struct gbm_bo *bo)
  
 	gbm_bo_data_t *bo_data = (gbm_bo_data_t *) gbm_bo_get_user_data(bo);
 	if (!bo_data) {
-		LOG_V("%s: no user data found in BO (%p), set a new one.", __func__, bo);
+		LOG_V("no user data found in BO (%p), set a new one.", bo);
 		bo_data = calloc(1, sizeof(gbm_bo_data_t));
 		bo_data->metadata.smpte2086 = calloc(1, sizeof(smpte2086_t));
 		bo_data->metadata.cta861_3 = calloc(1, sizeof(cta861_3_t));
